@@ -1,14 +1,6 @@
+Yahoo goodies
 
-
-
-==================================
-Starting and stopping from CMD line
-
-Start:
-
-"google-chrome https://whatever.com"
-
-Kill:
-
-"ps -ax | grep chrome" to get PID
-"kill -9 <pid>"
+get available players
+  "http://fantasysports.yahooapis.com/fantasy/v2/league/223.l.431/players;status=A"
+  
+  148766 <-- possible league id?
