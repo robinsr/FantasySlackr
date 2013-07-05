@@ -66,7 +66,7 @@ function getKeys(){
  
  
  
-function getToken(cb){
+function getToken(req,res){
     generateNonce(function(nonce){
         var response = ''
  
@@ -102,13 +102,17 @@ function getToken(cb){
                 console.log('end');
                 var responseObject = querystring.parse(response);
  
-                client.set("fantasy:"+responseObject.oauth_token, JSON.stringify(responseObject),function(er,ex){
-                    if (er){
-                        console.log('database error; get token')
-                        cb(1,null);
-                    }
-                    else {
-                        cb(null,responseObject);
+                client.set("fantasy:oauth:"+responseObject.oauth_token, JSON.stringify(responseObject),function(err,ex){
+                    if (err){
+                        res.writeHead(503);
+                        res.end("server error, prolly the db");
+                        return;
+                    } else {
+                        res.writeHead(302, {
+                            'Location': data.xoauth_request_auth_url
+                        });
+                        res.end();
+                        return;
                     }
                 })
             });
@@ -123,9 +127,10 @@ function getToken(cb){
  
     })
 }
-function getAccess(w,cb){
+function getAccess(req,res){
+    var dataFromYahooCallback = qs.parse(nodeurl.parse(req.url).query);
     generateNonce(function(nonce){
-        client.get("fantasy:"+w.oauth_token,function(err,result){
+        client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
             if (err){
                 console.log('database error; get access')
             } else {
@@ -139,8 +144,8 @@ function getAccess(w,cb){
                     'oauth_consumer_key' : consumerKey,
                     'oauth_signature_method' : 'plaintext',
                     'oauth_signature' : consumerSecret+'&'+storedData.oauth_token_secret,
-                    'oauth_verifier': w.oauth_verifier,
-                    'oauth_token' : w.oauth_token
+                    'oauth_verifier': dataFromYahooCallback.oauth_verifier,
+                    'oauth_token' : dataFromYahooCallback.oauth_token
                 });
  
                 var postOptions = {
@@ -162,7 +167,23 @@ function getAccess(w,cb){
                     });
                     res.on('end',function(){
                         console.log('end');
-                        cb(querystring.parse(response));
+                        //cb();
+
+                        var oauthResponse = querystring.parse(response)
+
+                            // do stuff with data
+                        storedData.oauth_token = oauthResponse.oauth_token;
+                        storedData.oauth_token_secret = oauthResponse.oauth_token_secret;
+                        storedData.oauth_session_handler = oauthResponse.oauth_session_handler;
+                        storedData.xoauth_yahoo_guid = oauthResponse.xoauth_yahoo_guid;
+
+                            // or 
+
+                        // for (var l in oauthResponse){
+                        //     storedData[l] = oauthResponse[l];
+                        // }
+
+                            // redirect user to their page
                     });
                     res.on('error',function(err){
                         console.log('***** there was an error *****');
@@ -212,24 +233,12 @@ function handler(req,res){
     var p = nodeurl.parse(req.url).pathname;
     console.log(req.url,p);
  
-    if (p == '/test'){
-        getToken(function(err,data){
-            if (err){
-                res.writeHead(503);
-                res.end("server error, prolly the db");
-            } else {
-                res.writeHead(302, {
-                    'Location': data.xoauth_request_auth_url
-                });
-                res.end();
-            }
-        })
+    if (p == '/getYahooAccess'){
+        getToken(req,res);
+        return;
     } else if ( p == '/apicallback'){
-        getAccess(qs.parse(nodeurl.parse(req.url).query),function(ret){
-            res.write(JSON.stringify(ret));
-            res.end();
-        })
- 
+        getAccess(req,res);
+        return;
     } else {
         serveStatic(req,res);
         return
