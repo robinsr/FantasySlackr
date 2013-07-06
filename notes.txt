@@ -4,3 +4,84 @@ get available players
   "http://fantasysports.yahooapis.com/fantasy/v2/league/223.l.431/players;status=A"
   
   148766 <-- possible league id?
+
+==========================
+
+DB objects
+
+fantasyuser:<username> {
+	username: <username>,
+	login: {
+		pass: <salted+hashed password>,
+		salt: <salt>
+	},
+	oauth: {
+		request_token: < >,
+		request_token_secret: < >,
+		request_url: < >,
+		access_token: < >,
+		access_token_secret, <>
+		access_token_expires, <time>
+	},
+	guid: <GUID>,
+	teams: [
+		{
+			team_id: < >,
+			team_name: < >,
+			league_id: <>,
+			league_name: <>,
+			roster: [
+				{
+					automate_player_id: <>  // 
+					yahoo_player_id: <>,
+					player_full_name: <>,
+					player_first: <>,
+					player_last: <>,
+					position: <>,
+					injury_status: <o,p,q,?>,
+					bye_week: <#>,
+					projected_points: {
+						week1: <>,
+						...
+					},
+					settings:{
+						never_drop: <true/false>,
+						start_if_probable: <true/false>,
+						start_if_questionable: <true/false>
+					}
+				}
+			],
+		}
+	],
+	metadata: {
+		upcoming_byes: {
+			week7: [
+				{
+				automate_player_id
+				}
+			]
+		},
+		weekly_seats: {
+			week1: {
+				qb: <automate_player_id/"unfilled_seat">,
+				rb: <automate_player_id/"unfilled_seat">,
+				rb: <automate_player_id/"unfilled_seat">,
+				wr: <automate_player_id/"unfilled_seat">,
+				wr: <automate_player_id/"unfilled_seat">,
+				wr: <automate_player_id/"unfilled_seat">,
+				te: <automate_player_id/"unfilled_seat">,
+				k: <automate_player_id/"unfilled_seat">,
+				def:<automate_player_id/"unfilled_seat">,
+				bench1:<automate_player_id/"unfilled_seat">,
+				bench2:<automate_player_id/"unfilled_seat">,
+				bench3:<automate_player_id/"unfilled_seat">,
+				bench4:<automate_player_id/"unfilled_seat">,
+				bench5:<automate_player_id/"unfilled_seat">,
+				bench6:<automate_player_id/"unfilled_seat">,
+			},
+			week2: {
+				...
+			}
+		}
+	}
+}
