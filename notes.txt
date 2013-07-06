@@ -11,6 +11,7 @@ DB objects
 
 fantasyuser:<username> {
 	username: <username>,
+	email: <email>,
 	login: {
 		pass: <salted+hashed password>,
 		salt: <salt>
