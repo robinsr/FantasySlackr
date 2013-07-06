@@ -3,7 +3,7 @@
 		<head>
 			<meta charset="utf-8" />
 			<title>Fantasy Automate &middot; Demos &middot; Ethernet Bucket</title>
-		    <script type="text/javascript" src="../jquery-1.8.3.min.js"></script>
+		    <!--<script type="text/javascript" src="../jquery-1.8.3.min.js"></script>-->
 
 		    <!-- Le styles -->
 		    <link href="/bootstrap/bootstrap.min.css" rel="stylesheet">
@@ -21,14 +21,14 @@
             <div class="center_items span12 login_div">
                 <div class="span6">
                     <p class="lead">Log in...</p>
-                    <form class="form-horizontal" id="signin_form" name="signin_form" data-bind="submit: function(){login();}">
+                    <form class="form-horizontal" id="signin_form" method="POST" action="loginForm">
                         <div class="control-group">
                         <label class="control-label">Username</label>
-                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="text" placeholder="Username" id="uname" name="uname" data-bind="value:uname"></div>
+                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="text" placeholder="Username" id="uname" name="uname"></div>
                         </div>
                         <div class="control-group">
                         <label class="control-label">Password</label>
-                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="password" placeholder="Password" id="pass" data-bind="value:upass"></div>
+                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="password" placeholder="Password" id="pass" name="pass"></div>
                         </div>
                     <div class="control-group">
                         <div class="controls">
@@ -39,25 +39,25 @@
                 </div>
                 <div class="span6">
                     <p class="lead">...or sign up!</p>
-                    <form class="form-horizontal" id="signup_form" data-bind="submit: function(){newUser()}">
+                    <form class="form-horizontal" id="signup_form" method="POST" action="signupForm">
                         <div class="control-group">
                         <label class="control-label">Desired Username</label>
-                        <div class="controls"><input type="text" placeholder="Username" name="signup_uname" data-bind="value:signup_uname"></div>
+                        <div class="controls"><input type="text" placeholder="Username" name="signup_uname"></div>
                         </div>
                         <div class="control-group">
                         <label class="control-label">Password</label>
-                        <div class="controls"><input type="password" placeholder="Password" name="signup_pass" data-bind="value:signup_pass"></div>
+                        <div class="controls"><input type="password" placeholder="Password" name="signup_pass"></div>
                         </div>
                         <div class="control-group">
                         <label class="control-label">Email</label>
-                        <div class="controls"><input type="text" placeholder="Email" name="signup_email" data-bind="value:signup_email"></div>
+                        <div class="controls"><input type="text" placeholder="Email" name="signup_email"></div>
                         </div>
                         <div class="control-group">
                         <div class="controls">
                             <button type="submit" class="btn btn-primary">Sign Up!</button>
                         </div>
                         </div>
-                        <span data-bind="if: signuperror() != ''">
+                        <span>
                         <div class="control-group">
                             <div class="controls">
                                 <p class="text-error" data-bind="text: signuperror()"></p>
