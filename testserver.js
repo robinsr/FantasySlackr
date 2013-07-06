@@ -205,7 +205,7 @@ function getAccess(req,res){
 function serveStatic(req, res) {
     var filePath = '.' + req.url;
     if (filePath == './') {
-        filePath = './index.html';
+        filePath = './login.html';
     }
     fs.exists(filePath, function (exists) {
         if (exists) {
