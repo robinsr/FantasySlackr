@@ -124,6 +124,83 @@ function constructDashboard(req,res){
 	})
 }
 
+
+    // the following function create an ouath signiture 
+function constructOauthBaseString(token,cb){
+    generateNonce(function(nonce){
+        var request = {
+            method:'GET',
+            base_url: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1',
+            parameters: [
+                {
+                    key: 'oauth_consumer_key',
+                    value: consumerKey
+                },
+                {
+                    key: 'oauth_nonce',
+                    value: nonce
+                },
+                {
+                    key: 'oauth_signiture_method',
+                    value: 'HMAC-SHA1'
+                },
+                {
+                    key: 'oauth_timestamp',
+                    value: new Date().getTime()
+                },
+                {
+                    key: 'oauth_token',
+                    value: token
+                },
+                {
+                    key: 'oauth_version',
+                    value: 1.0
+                },
+            ]
+        }
+
+        var count = 0;
+        var outputString = '';
+        function buildString(cbb){
+            console.log('building string '+count+" "+(request.parameters.length-1));
+            
+            var key = encodeURIComponent(request.parameters[count].key);
+            var val = encodeURIComponent(request.parameters[count].value);
+
+            if (count == (request.parameters.length-1)){
+                var lastParam = key+"="+val;
+                outputString += lastParam;
+                cbb(outputString)
+
+            } else {
+                var param = key+"="+val+"&";
+                outputString += param;
+                count++
+                buildString(cbb);
+            }
+        }
+
+        buildString(function(parameterString){
+            var baseString = request.method
+                baseString += "&";
+                baseString += encodeURIComponent(request.base_url);
+                baseString += "&";
+                baseString += encodeURIComponent(parameterString);
+            
+            cb(baseString);
+        });
+    });
+}
+function constructSigningKey(token_secret,cb){
+    var signingKey = encodeURIComponent(consumerSecret);
+        signingKey += "&";
+        signingKey += encodeURIComponent(token_secret);
+        cb(signingKey);
+}
+function constructSigniture(base_string,signing_key,cb){
+    cb(crypto.createHmac('sha1',signing_key).update(base_string).digest('hex'));
+}
+
 	// step 1 of oauth; gets request token
 function getToken(cb){
     generateNonce(function(nonce){
@@ -494,6 +571,17 @@ function handler(req,res){
 	} else if (p == '/loggedout'){
 		logoutSuccess(req,res);
 		return;
+    } else if (p =='/testRequest'){
+        constructOauthBaseString('testtoken',function(base_string){
+            constructSigningKey('testtokensecred',function(signing_key){
+                constructSigniture(base_string,signing_key,function(sig){
+                    res.writeHead(200);
+                    res.end(sig);
+                })
+            })
+
+            
+        })
     } else {
         serveStatic(req,res);
         return
