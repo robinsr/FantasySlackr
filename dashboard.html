@@ -108,7 +108,133 @@
 
       <div class="row" id="settings_section" style="display:none;">
       	<div class="span12">
-          <h2>This is the Settings Section</h2>
+            <form id="settings-form" class="form-horizontal" data-bind="submit:">
+              <fieldset>
+                <legend>Default Player Actions
+                  <button type="button" class="btn btn-warning pull-right" data-bind="">Save</button>
+                </legend>
+
+                <!-- probable player -->
+                  <div class="control-group">
+                    <label class="control-label">Probable Player</label>
+                    <div class="controls">
+                      <select>
+                        <option value="start">Start</option>
+                        <option value="bench">Bench</option>
+                        <option value="DIF">Replace if necessary</option>
+                        <option value="replace">Replace always</option>
+                        <option value="ask">Ask me</option>
+                      </select>
+                    </div>
+                  </div>
+
+                <!-- questionable player -->
+                  <div class="control-group">
+                    <label class="control-label">Questionable Player</label>
+                    <div class="controls">
+                      <select>
+                        <option value="start">Start</option>
+                        <option value="bench">Bench</option>
+                        <option value="DIF">Replace if necessary</option>
+                        <option value="replace">Replace always</option>
+                        <option value="ask">Ask me</option>
+                      </select>
+                    </div>
+                  </div>
+
+                <!-- questionable player -->
+                  <div class="control-group">
+                    <label class="control-label">Out Player</label>
+                    <div class="controls">
+                      <select>
+                        <option value="bench">Bench</option>
+                        <option value="DIF">Replace if necessary</option>
+                        <option value="replace">Replace always</option>
+                        <option value="ask">Ask me</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- lack of eligable players -->
+                  <div class="control-group">
+                    <label class="control-label">Lack Of Eligable Players</label>
+                    <div class="controls">
+                      <select>
+                        <option value="replace_bye">Replace player on bye</option>                        
+                        <option value="replace_injured">Replace injured player</option>
+                        <option value="ask">Ask me</option>
+                        <option value="do_nothing">Do Nothing</option>
+                      </select>
+                    </div>
+                  </div>
+
+                <!-- Ask before -->
+                  <div class="control-group">
+                    <label class="control-label">Ask before dropping/replacing</label>
+                    <div class="controls">
+                      <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_QB"> QB
+                      </label>
+                      <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_RB"> RB
+                      </label>
+                      <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_WR"> WR
+                      </label>
+                      <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_TE"> TE
+                      </label>
+                      <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_DEF"> DEF
+                      </label>
+                      <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_K"> K
+                      </label>
+                      <span class="help-block">Note: Player's individual setting will overide the default setting</span>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <fieldset>
+                  <legend>Email Alert</legend>
+
+                  <!-- wednesday emil -->
+                  <div class="control-group">
+                    <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_QB">Send Wednesday Night Lineup Email
+                      </label>
+                  </div>
+
+                  <!-- injury report emil -->
+                  <div class="control-group">
+                    <label class="checkbox inline">
+                        <input type="checkbox" id="askBefore_QB">Send Injury Reports
+                      </label>
+                  </div>
+
+                </fieldset>
+
+                <fieldset>
+                  <legend>Account Settings</legend>
+                    <div class="control-group">
+                    <label class="control-label">Old Password:</label>
+                    <div class="controls"><input type="text" placeholder="" name="oldPass" data-bind="value:oldPass,enable:username()!='demo'"></div>
+                    </div>
+                    <div class="control-group">
+                        <label class="control-label">New Password:</label>
+                        <div class="controls"><input type="password" placeholder="" name="newPass" data-bind="value:newPass,enable:username()!='demo'"></div>
+                    </div>
+                    <span data-bind="foreach:changePassError">
+                    <div class="control-group">
+                        <div class="controls">
+                            <p data-bind="text:message,css:{'text-error':level=='error','text-success':level=='success'}"></p>
+                        </div>
+                    </div>
+                    </span>
+                </fieldset>
+                <fieldset><legend><!-- --></legend></fieldset>
+
+            </form>
       	</div>
       </div>
 
