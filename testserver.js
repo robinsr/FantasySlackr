@@ -27,6 +27,35 @@ function requestHash(cb) {
         return;
     })
 }
+function validateSession(n, s, cb) {
+    console.log(n, s)
+
+    // so that demos work regardless of sessions. its a problem if there are two people
+    // trying to use the demo account at once
+    if (n === 'demo') {
+        console.log('demo session ' + s);
+        cb(true);
+
+        // regular session validation
+    } else {
+        client.exists("session:" + n, function (ex, r) {
+            if (r === 0) {
+                cb(false);
+                return;
+            } else {
+                client.get("session:" + n, function (err, r) {
+                    if (r == s) {
+                        cb(true);
+                        return;
+                    } else {
+                        cb(false);
+                        return;
+                    }
+                })
+            }
+        });
+    }
+}
 var mimeType = {
     '.js': 'text/javascript',
     '.html': 'text/html',
@@ -73,6 +102,26 @@ function getKeys(){
     });
     keyReq.write(postData);
     keyReq.end();
+}
+
+function constructDashboard(req,res){
+	var query = qs.parse(nodeurl.parse(req.url).query);
+	validateSession(query.user,query.sess,function(sessionValid){
+		if (sessionValid){
+			var d = {
+    			name: query.user,
+    			session: query.sess
+	    	}
+	    	var html = ''
+	    	mu.compileAndRender('dashboard.html', d).on('data', function (data) {
+			    html += data.toString();
+		  	}).on('end', function(){
+		  		res.writeHead(200);
+			    res.end(html);
+			    return;
+		  	}); 
+		}
+	})
 }
 
 	// step 1 of oauth; gets request token
@@ -132,6 +181,7 @@ function setTemporaryToken(token,secret,username){
 		username: username
 	}
 	client.set("fantasy:oauth:"+token,JSON.stringify(set),function(err,r){});
+	client.expire("fantasy:oauth:"+token, 1800);
 }
 
 	// part 2 of oauth; exchanges verifier for access token
@@ -189,9 +239,22 @@ function getAccess(req,res){
 		                        userdata.oauth_access_token_secret = oauthResponse.oauth_token_secret;
 		                        userdata.oauth_session_handle = oauthResponse.oauth_session_handle;
 		                        userdata.xoauth_yahoo_guid = oauthResponse.xoauth_yahoo_guid;
-		                        res.writeHead(200);
-		                        res.end(utils.inspect(userdata));
-		                        client.del("fantasy:oauth:"+dataFromYahooCallback.oauth_token);
+		                        client.set("fantasyuser:"+storedData.username,JSON.stringify(userdata),function(err){
+		                        	if (err){
+		                        		sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+		                        	} else {
+		                        		var session_key = "session:"+storedData.username;
+		                        		requestHash(function(session_val){
+		                        			client.set(session_key, session_val, function () {
+				                            client.expire(session_key, 1800);
+				                            res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
+				                            res.end();
+					                        client.del("fantasy:oauth:"+dataFromYahooCallback.oauth_token);
+				                            return;
+				                        	});
+		                        		});
+		                        	}
+		                        });
 		                    } else {
 		                    	sendErrorResponse(res,"There was an error setting up your account","Please try again later");
 							}
@@ -231,10 +294,10 @@ function login(req, res, data) {
                         } else {
                             return_object.email = 'no email';
                         }
-                        var session_key = "session:" + query.name;
+                        var session_key = "session:" + data.uname;
                         client.set(session_key, session_val, function () {
                             client.expire(session_key, 1800);
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.writeHead(302, { 'Location': 'dashboard?user='+data.uname+'&sess='+session_val });
                             res.end(JSON.stringify(return_object));
                             return;
                         });
@@ -251,6 +314,39 @@ function login(req, res, data) {
             }
         }
     })
+}
+function logout(req, res) {
+	var query = qs.parse(nodeurl.parse(req.url).query);
+    var uname = "session:" + query.n;
+    client.get(uname, function (err, c) {
+        if (err) throw err;
+        if (c) {
+            client.del(uname, function () {
+                res.writeHead(302, {
+                	'Location' : '/FantasyAutomate/loggedout'
+                });
+                res.end();
+            });
+        } else {
+            sendErrorResponse(res,'You were logged in? Maybe your session expired','')
+			return;
+        }
+    });
+}
+function logoutSuccess(req,res){
+	var d = {
+		header: "Goodbye",
+		message1: "You have been logged out",
+		message2: ""
+	}
+	var html = ''
+	mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
+	    html += data.toString();
+  	}).on('end', function(){
+  		res.writeHead(200);
+	    res.end(html);
+  	});
+    return;
 }
 
 	// creates user in database and begins oauth process, sends link to yahoo auth page if successful
@@ -388,6 +484,15 @@ function handler(req,res){
 		return;
 	} else if (p == '/signupForm'){
 		signupFormHandler(req,res);
+		return;
+	} else if (p == '/dashboard'){
+		constructDashboard(req,res);
+		return
+	} else if (p == '/logout'){
+		logout(req,res);
+		return;
+	} else if (p == '/loggedout'){
+		logoutSuccess(req,res);
 		return;
     } else {
         serveStatic(req,res);
