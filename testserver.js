@@ -20,7 +20,7 @@ function generateNonce(cb){
     });
 }
 function requestHash(cb) {
-    crypto.randomBytes(16, function (ex, buf) {
+    crypto.randomBytes(2, function (ex, buf) {
         if (ex) throw ex;
         console.log('randomness=' + buf.toString('hex'))
         cb(buf.toString('hex'));
@@ -55,6 +55,21 @@ function validateSession(n, s, cb) {
             }
         });
     }
+}
+function invalidSession(req,res){
+    var d = {
+        header: "You're session expired",
+        message1: "If you're seeing this a lot, we're probably doing something wrong",
+        message2: "<p>Click <a href='/FantasyAutomate'>here</a> to login again</p>"
+    }
+    var html = ''
+    mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
+        html += data.toString();
+    }).on('end', function(){
+        res.writeHead(200);
+        res.end(html);
+        return;
+    }); 
 }
 var mimeType = {
     '.js': 'text/javascript',
@@ -108,99 +123,134 @@ function constructDashboard(req,res){
 	var query = qs.parse(nodeurl.parse(req.url).query);
 	validateSession(query.user,query.sess,function(sessionValid){
 		if (sessionValid){
-			var d = {
-    			name: query.user,
-    			session: query.sess
-	    	}
-	    	var html = ''
-	    	mu.compileAndRender('dashboard.html', d).on('data', function (data) {
-			    html += data.toString();
-		  	}).on('end', function(){
-		  		res.writeHead(200);
-			    res.end(html);
-			    return;
-		  	}); 
-		}
+            client.get('fantasyuser:'+query.user,function(err,result){
+
+                if (err || (result == null)){
+                    sendErrorResponse(res,"We're having some problems.","Please try again later.");
+                } else {
+                    var userData = JSON.parse(result);
+                    if (userData.oauth_access_token && userData.oauth_access_token_secret){
+                        t = userData.oauth_access_token;
+                        ts = userData.oauth_access_token_secret;
+
+                        callYahoo('http://fantasysports.yahooapis.com/fantasy/v2/league/314.l.148766','GET',t,ts,function(err,response){
+                            if (err){
+                                sendErrorResponse(res,"There was an error getting info from yahoo","Please try again later");
+                            } else {
+                                res.writeHead(200);
+                                res.end(utils.inspect(response));
+                            }
+                        });
+                    } else {
+                        var d = {
+                            header: "We still need something from you",
+                            message1: "You have not allowed us access to your Yahoo Fantasy Sports account.",
+                            message2: "<p>Click <a href='/FantasyAutomate/grantAccess?name="+query.user+"&sess="+query.sess+"'>here</a> to authorize with Yahoo</p>"
+                        }
+                        var html = ''
+                        mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
+                            html += data.toString();
+                        }).on('end', function(){
+                            res.writeHead(200);
+                            res.end(html);
+                            return;
+                        }); 
+                    }      
+                } 
+            });	
+		} else {
+            invalidSession(req,res);
+            return;
+        }
 	})
 }
-
-
-    // the following function create an ouath signiture 
-function constructOauthBaseString(token,cb){
+function callYahoo(url,method,token,token_secret,cb){
     generateNonce(function(nonce){
-        var request = {
-            method:'GET',
-            base_url: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1',
-            parameters: [
-                {
-                    key: 'oauth_consumer_key',
-                    value: consumerKey
-                },
-                {
-                    key: 'oauth_nonce',
-                    value: nonce
-                },
-                {
-                    key: 'oauth_signiture_method',
-                    value: 'HMAC-SHA1'
-                },
-                {
-                    key: 'oauth_timestamp',
-                    value: new Date().getTime()
-                },
-                {
-                    key: 'oauth_token',
-                    value: token
-                },
-                {
-                    key: 'oauth_version',
-                    value: 1.0
-                },
-            ]
+        var oauth = {
+            oauth_consumer_key: consumerKey,
+            oauth_nonce: nonce,
+            oauth_signature_method:'HMAC-SHA1',
+            oauth_timestamp:  Math.round((new Date()).getTime() / 1000),
+            oauth_token: token,
+            oauth_version: "1.0"
         }
-
-        var count = 0;
-        var outputString = '';
-        function buildString(cbb){
-            console.log('building string '+count+" "+(request.parameters.length-1));
-            
-            var key = encodeURIComponent(request.parameters[count].key);
-            var val = encodeURIComponent(request.parameters[count].value);
-
-            if (count == (request.parameters.length-1)){
-                var lastParam = key+"="+val;
-                outputString += lastParam;
-                cbb(outputString)
-
-            } else {
-                var param = key+"="+val+"&";
-                outputString += param;
-                count++
-                buildString(cbb);
+        generateOAuthSignature(method,url,oauth,token_secret,function(sig){
+            console.log('sig: '+sig);
+            oauth.oauth_signature = sig;
+            var oauthHeader = "";
+            for (var k in oauth){
+                console.log('encoding');
+                oauthHeader += ", " + encodeURIComponent(k) + "=\"" + encodeURIComponent(oauth[k]) + "\"";
             }
-        }
-
-        buildString(function(parameterString){
-            var baseString = request.method
-                baseString += "&";
-                baseString += encodeURIComponent(request.base_url);
-                baseString += "&";
-                baseString += encodeURIComponent(parameterString);
-            
-            cb(baseString);
+            oauthHeader = oauthHeader.substring(1);
+            logCall({req:JSON.stringify(oauth)});
+     
+            var postOptions = {
+                host: nodeurl.parse(url).hostname,
+                port: 80,
+                path: nodeurl.parse(url).pathname,
+                method: method,
+                headers: {
+                    'Content-Type' :'application/x-www-form-urlencoded',
+                    'Authorization': "Oauth" + oauthHeader
+                }
+            };
+            var response = ''
+            var postReq = http.request(postOptions, function(res){
+                res.setEncoding('utf8');
+                res.on('data',function(chunk){
+                    console.log('data');
+                    response += chunk;
+                });
+                res.on('end',function(){
+                    console.log('yahoo responded!');
+                    logCall({res:response.toString()});
+                    cb(null,querystring.parse(response));
+                    return;
+                })
+                res.on('error',function(err){
+                    console.log('***** there was an error *****');
+                    console.log(err);
+                    cb(1,null)
+                    return;
+                })
+            });
+     
+            postReq.write('');
+            postReq.end();
         });
     });
 }
-function constructSigningKey(token_secret,cb){
-    var signingKey = encodeURIComponent(consumerSecret);
-        signingKey += "&";
-        signingKey += encodeURIComponent(token_secret);
-        cb(signingKey);
-}
-function constructSigniture(base_string,signing_key,cb){
-    cb(crypto.createHmac('sha1',signing_key).update(base_string).digest('hex'));
+function logCall(d){
+    fs.appendFile('apirequests.log',JSON.stringify(d)+"\n");
 }
 
+    // the following function create an ouath signiture 
+function generateOAuthSignature(method,base_url,oauth,token_secret,cb){
+    var keys = [];
+    for (var d in oauth){
+        keys.push(d);
+    }
+    keys.sort();
+    var output =  encodeURIComponent(method) + "&" + encodeURIComponent(base_url) + "&";
+    var params = "";
+    keys.forEach(function(k){
+        params += "&" + encodeURIComponent(k) + "=" + encodeURIComponent(oauth[k]);
+    });
+    params = encodeURIComponent(params.substring(1));
+
+    var oauthHeader = "";
+    for (var k in oauth){
+        oauthHeader += ", " + encodeURIComponent(k) + "=\"" + encodeURIComponent(oauth[k]) + "\"";
+    }
+    oauthHeader = oauthHeader.substring(1);
+
+    var signingKey = encodeURIComponent(consumerSecret);
+    signingKey += "&";
+    signingKey += encodeURIComponent(token_secret);
+
+    cb(crypto.createHmac('sha1',signingKey).update(output+params).digest('base64'));
+}
 	// step 1 of oauth; gets request token
 function getToken(cb){
     generateNonce(function(nonce){
@@ -572,16 +622,7 @@ function handler(req,res){
 		logoutSuccess(req,res);
 		return;
     } else if (p =='/testRequest'){
-        constructOauthBaseString('testtoken',function(base_string){
-            constructSigningKey('testtokensecred',function(signing_key){
-                constructSigniture(base_string,signing_key,function(sig){
-                    res.writeHead(200);
-                    res.end(sig);
-                })
-            })
-
-            
-        })
+        
     } else {
         serveStatic(req,res);
         return
