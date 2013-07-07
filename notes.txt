@@ -3,7 +3,23 @@ Yahoo goodies
 get available players
   "http://fantasysports.yahooapis.com/fantasy/v2/league/223.l.431/players;status=A"
   
-  148766 <-- possible league id?
+  148766 <- league id?
+
+==========================
+
+Free Agents / Waivers
+
+-probable/questionable players still have projected points 
+-option to pick up player with high PP, but is probable or questionable
+
+-rank position strength for all teams in the league
+	-you can suggest trades
+	-"your team needs a stronger player at x position"
+	-"your team has enough strong players at x position"
+	=""
+
+
+
 
 ==========================
 
