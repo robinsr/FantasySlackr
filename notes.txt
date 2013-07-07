@@ -18,7 +18,12 @@ Free Agents / Waivers
 	-"your team has enough strong players at x position"
 	=""
 
+-"ask me" on all transactions / some transactions
 
+-different status modes
+	-only set lineup
+	-set lineup and look for trades/free-agents
+	-set lineup, look for trades/free-agents, and make trades automatically
 
 
 ==========================
