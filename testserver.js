@@ -118,6 +118,27 @@ function getKeys(){
     keyReq.write(postData);
     keyReq.end();
 }
+function appMonitor(level,message){
+    var postData = {
+    	level: level,
+    	message: message
+    }
+    var postOptions = {
+        host: '127.0.0.1',
+        port: 8135,
+        method: 'POST',
+        headers: {
+            'Content-Type' :'application/json'
+        }
+    };
+    var keyReq = http.request(postOptions,function(res){
+        res.on('end',function(){
+            console.log("sent to App Monitor: ",level,message);
+        });
+    });
+    keyReq.write(postData);
+    keyReq.end();
+}
 
 function constructDashboard(req,res){
 	var query = qs.parse(nodeurl.parse(req.url).query);
@@ -312,12 +333,14 @@ function setTemporaryToken(token,secret,username){
 }
 
 	// part 2 of oauth; exchanges verifier for access token
-function getAccess(req,res){
-    var dataFromYahooCallback = qs.parse(nodeurl.parse(req.url).query);
+function getAccess(dataFromYahooCallback){
     generateNonce(function(nonce){
+    	
+    		// find token_secret in db
         client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
             if (err){
-                console.log('database error; get access')
+            	appMonitor("error","failed to find token in database. step 2 of oauth")
+                cb(err,null)
             } else {
                 console.log(result);
                 var storedData = JSON.parse(result);
@@ -399,7 +422,13 @@ function getAccess(req,res){
         });    
     });
 }
-
+function handleApiCallback(req,res){
+	var dataFromYahooCallback = qs.parse(nodeurl.parse(req.url).query);
+	getAccess(dataFromYahooCallbacl,function(){
+		
+	})
+	
+}
 	// sets session keys for users and (in future) get new oauth token
 function login(req, res, data) {
     var p = /[0-9a-f]{32}/
@@ -476,7 +505,7 @@ function createUser(req, res, data) {
         console.log(r);
         if (r == 1) {
         	sendErrorResponse(res,"Account already exists for "+data.signup_uname,"Please try a different username")
-			return;
+		return;
         } else {
             requestHash(function (hash_salt) {
                 var hashed_pass_and_salt = crypto.createHash('md5').update(data.signup_pass + hash_salt).digest('hex');
@@ -597,8 +626,8 @@ function handler(req,res){
     console.log(req.url,p);
  
 	if (p == '/apicallback'){
-        getAccess(req,res);
-        return;
+        	handleApiCallback(req,res);
+        	return;
 	} else if (p == '/loginForm'){
 		loginFormHandler(req,res);
 		return;
