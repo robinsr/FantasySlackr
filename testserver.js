@@ -449,31 +449,24 @@ function logout(req, res) {
         if (err) throw err;
         if (c) {
             client.del(uname, function () {
-                res.writeHead(302, {
-                	'Location' : '/FantasyAutomate/loggedout'
-                });
-                res.end();
+        	var d = {
+			header: "Goodbye",
+			message1: "You have been logged out",
+			message2: ""
+		}
+		var html = ''
+		mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
+		    	html += data.toString();
+	  	}).on('end', function(){
+	  		res.writeHead(200);
+		    	res.end(html);
+	  	});
             });
         } else {
             sendErrorResponse(res,'You were logged in? Maybe your session expired','')
 			return;
         }
     });
-}
-function logoutSuccess(req,res){
-	var d = {
-		header: "Goodbye",
-		message1: "You have been logged out",
-		message2: ""
-	}
-	var html = ''
-	mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
-	    html += data.toString();
-  	}).on('end', function(){
-  		res.writeHead(200);
-	    res.end(html);
-  	});
-    return;
 }
 
 	// creates user in database and begins oauth process, sends link to yahoo auth page if successful
