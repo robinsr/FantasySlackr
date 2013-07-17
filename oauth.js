@@ -210,7 +210,7 @@ var getAccess = function(dataFromYahooCallback,storedData,cb){
             });
             oauth_res.on('end',function(){
                 console.log('end');
-                cb(querystring.parse(response))
+                cb(null,querystring.parse(response))
             });
             oauth_res.on('error',function(err){
                 console.log('***** there was an error *****');
