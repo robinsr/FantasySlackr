@@ -141,7 +141,8 @@ function handleApiCallback(req,res){
             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
             return
         } else {
-            oauth.getAccess(dataFromYahooCallback,JSON.parse(result),function(err,result){
+            var storedData = JSON.parse(result);
+            oauth.getAccess(dataFromYahooCallback,storedData,function(err,result){
                 if (err){
                     templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
                     console.log('***** there was an error *****');
