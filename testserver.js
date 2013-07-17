@@ -142,14 +142,16 @@ function handleApiCallback(req,res){
             return
         } else {
             var storedData = JSON.parse(result);
-            oauth.getAccess(dataFromYahooCallback,storedData,function(err,result){
+            oauth.getAccess(dataFromYahooCallback,storedData,function(err,oauthResponse){
                 if (err){
                     templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
                     console.log('***** there was an error *****');
                     console.log(err);
                 } else {
                     client.get("fantasyuser:"+storedData.username,function(db_err,dat){
-                        if (db_err == null){
+                        if (db_err){
+                            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+                        } else {
                             var userdata = JSON.parse(dat);
                             console.log('oauthResponse');
                             console.log(oauthResponse);
@@ -172,9 +174,7 @@ function handleApiCallback(req,res){
                                         });
                                     });
                                 }
-                            });
-                        } else {
-                            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+                            });                          
                         }
                     });
                 }
