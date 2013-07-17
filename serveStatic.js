@@ -1,7 +1,7 @@
 var fs = require('fs');
 
     // handles static content - usually passed off to nginx after dev is complete
-module.exports.serveStatic = function(req, res) {
+var serveStatic = function(req, res) {
     var filePath = '.' + req.url;
     if (filePath == './') {
         filePath = './login.html';
@@ -26,3 +26,5 @@ module.exports.serveStatic = function(req, res) {
         }
     });
 }
+
+module.exports = serveStatic;

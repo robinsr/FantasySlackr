@@ -10,7 +10,7 @@ var http = require('http'),
     client = redis.createClient(),
     mu = require('mu2'),
     utils = require('util');
-    serveStatic = require('./serveStatis');
+    serveStatic = require('./serveStatic');
 
 mu.root = __dirname + '/'
  
