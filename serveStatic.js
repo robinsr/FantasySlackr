@@ -1,6 +1,22 @@
 var fs = require('fs');
 
     // handles static content - usually passed off to nginx after dev is complete
+
+var mimeType = {
+    '.js': 'text/javascript',
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.jpg': 'image/jpeg',
+    '.png': 'image/png',
+    '.json': 'application/json',
+    '.svg': 'image/svg+xml',
+    '.ttf': 'application/x-font-ttf',
+    '.otf': 'application/x-font-opentype',
+    '.woff': 'application/x-font-woff',
+    '.eot': 'application/vnd.ms-fontobject',
+    '': 'text/html'
+};
+
 var serveStatic = function(req, res) {
     var filePath = '.' + req.url;
     if (filePath == './') {
