@@ -1,7 +1,6 @@
 var http = require('http'),
     https = require('https'),
     fs = require('fs'),
-    path = require('path'),
     querystring = require('querystring'),
     crypto = require('crypto')
     nodeurl = require('url')
@@ -9,25 +8,13 @@ var http = require('http'),
     redis = require('redis'),
     client = redis.createClient(),
     mu = require('mu2'),
-    utils = require('util');
-    serveStatic = require('./serveStatic');
+    utils = require('util'),
+    serveStatic = require('./serveStatic'),
+    slackr_utils = require('./slackr_utils');
 
 mu.root = __dirname + '/'
  
-function generateNonce(cb){
-    crypto.randomBytes(48, function(ex, buf) {
-        cb(buf.toString('hex'));
-        return
-    });
-}
-function requestHash(cb) {
-    crypto.randomBytes(2, function (ex, buf) {
-        if (ex) throw ex;
-        console.log('randomness=' + buf.toString('hex'))
-        cb(buf.toString('hex'));
-        return;
-    })
-}
+
 function validateSession(n, s, cb) {
     console.log(n, s)
 
@@ -172,7 +159,7 @@ function constructDashboard(req,res){
 	})
 }
 function callYahoo(url,method,token,token_secret,cb){
-    generateNonce(function(nonce){
+    slackr_utils.generateNonce(function(nonce){
         var oauth = {
             oauth_consumer_key: consumerKey,
             oauth_nonce: nonce,
@@ -260,7 +247,7 @@ function generateOAuthSignature(method,base_url,oauth,token_secret,cb){
 }
 	// step 1 of oauth; gets request token
 function getToken(cb){
-    generateNonce(function(nonce){
+    slackr_utils.generateNonce(function(nonce){
         var response = ''
  
         var postData = querystring.stringify({
@@ -320,7 +307,7 @@ function setTemporaryToken(token,secret,username){
 
 	// part 2 of oauth; exchanges verifier for access token
 function getAccess(dataFromYahooCallback){
-    generateNonce(function(nonce){
+    slackr_utils.generateNonce(function(nonce){
     	
     		// find token_secret in db
         client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
@@ -380,7 +367,7 @@ function getAccess(dataFromYahooCallback){
 		                        		sendErrorResponse(res,"There was an error setting up your account","Please try again later");
 		                        	} else {
 		                        		var session_key = "session:"+storedData.username;
-		                        		requestHash(function(session_val){
+		                        		slackr_utils.requestHash(function(session_val){
 		                        			client.set(session_key, session_val, function () {
 				                            client.expire(session_key, 1800);
 				                            res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
@@ -429,7 +416,7 @@ function login(req, res, data) {
                 var concat_pass = data.pass + user_object.salt;
                 var hashed_pass = crypto.createHash('md5').update(concat_pass).digest('hex');
                 if (hashed_pass == user_object.pass) {
-                    requestHash(function (session_val) {
+                    slackr_utils.requestHash(function (session_val) {
                         return_object.sessionid = session_val;
                         if (user_object.email) {
                             return_object.email = user_object.email
@@ -493,7 +480,7 @@ function createUser(req, res, data) {
         	sendErrorResponse(res,"Account already exists for "+data.signup_uname,"Please try a different username")
 		return;
         } else {
-            requestHash(function (hash_salt) {
+            slackr_utils.requestHash(function (hash_salt) {
                 var hashed_pass_and_salt = crypto.createHash('md5').update(data.signup_pass + hash_salt).digest('hex');
                 getToken(function(oauth_err,oauth){
                 	if (oauth_err == null){
