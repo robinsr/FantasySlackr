@@ -94,19 +94,11 @@ function constructDashboard(req,res){
                             }
                         });
                     } else {
-                        var d = {
-                            header: "We still need something from you",
-                            message1: "You have not allowed us access to your Yahoo Fantasy Sports account.",
-                            message2: "<p>Click <a href='/FantasyAutomate/grantAccess?name="+query.user+"&sess="+query.sess+"'>here</a> to authorize with Yahoo</p>"
-                        }
-                        var html = ''
-                        mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
-                            html += data.toString();
-                        }).on('end', function(){
-                            res.writeHead(200);
-                            res.end(html);
-                            return;
-                        }); 
+                    	templates.sendGenericMessage(res
+                    		,"We still need something from you"
+                    		,"You have not allowed us access to your Yahoo Fantasy Sports account."
+                    		,"<p>Click <a href='/FantasyAutomate/grantAccess?name="+query.user+"&sess="+query.sess+"'>here</a> to authorize with Yahoo</p>");
+            		return;
                     }      
                 } 
             });	
