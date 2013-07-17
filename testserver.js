@@ -369,6 +369,4 @@ function handler(req,res){
     }
 }
  
- 
-getKeys();
 http.createServer(handler).listen(8133)
