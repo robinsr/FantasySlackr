@@ -178,18 +178,18 @@ function storeOauthData(userdata,oauthResponse){
     userdata.xoauth_yahoo_guid = oauthResponse.xoauth_yahoo_guid;
     client.set("fantasyuser:"+storedData.username,JSON.stringify(userdata),function(err){
         if (err){
-            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 005");
         } else {
             var session_key = "session:"+storedData.username;
             slackr_utils.requestHash(function(session_val){
                 client.set(session_key, session_val, function () {
                 client.expire(session_key, 1800);
-                
                 client.del("fantasy:oauth:"+dataFromYahooCallback.oauth_token);
                 return;
                 });
             });
         }
+    });
 }
 
 	// sets session keys for users and (in future) get new oauth token
