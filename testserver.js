@@ -138,26 +138,26 @@ function handleApiCallback(req,res){
     client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
         if (err){
             appMonitor("error","failed to find token in database. step 2 of oauth")
-            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later","err 001");
+            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later","err 001 - db error");
             return
         } else {
             var storedData = JSON.parse(result);
             oauth.getAccess(dataFromYahooCallback,storedData,function(err,oauthResponse){
                 if (err){
-                    templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 002");
+                    templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 002 - oauth connection problem");
                     console.log('***** there was an error *****');
                     console.log(err);
                 } else {
                     client.get("fantasyuser:"+storedData.username,function(db_err,dat){
                         if (db_err){
-                            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 003");
+                            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 003 - db error");
                         } else {
                             var userdata = JSON.parse(dat);
                             console.log('oauthResponse');
                             console.log(oauthResponse);
 
                             if (typeof oauthResponse.oauth_problem != null){
-                                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 004");
+                                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 004 - oauth problem");
                             } else {
                                 storeOauthData(userdata,oauthResponse);
                                 res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
@@ -289,7 +289,7 @@ function createUser(req, res, data) {
 		                
 		                client.set(uname, udata, function (err, rr) {
 		                    if (err) {
-		                    	templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+		                    	templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
 		            			return;
 		                    } else {
 	                    		var d = {
@@ -307,7 +307,7 @@ function createUser(req, res, data) {
 		                    }
 		                });
 		            } else {
-		            	templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+		            	templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
 		            	return;
 		            }
                 });

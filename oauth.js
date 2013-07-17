@@ -202,6 +202,8 @@ var getAccess = function(dataFromYahooCallback,storedData,cb){
             }
         };
 
+        logCall({req:postData});
+
         var postReq = https.request(postOptions, function(oauth_res){
             oauth_res.setEncoding('utf8');
             oauth_res.on('data',function(chunk){
