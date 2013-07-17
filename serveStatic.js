@@ -27,4 +27,4 @@ var serveStatic = function(req, res) {
     });
 }
 
-module.exports = serveStatic;
+module.exports.serveStatic = serveStatic;
