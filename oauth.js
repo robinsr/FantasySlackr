@@ -184,7 +184,7 @@ var getToken = function (cb){
                 return;
             })
             res.on('error',function(err){
-                console.log('***** there was an error *****');
+                console.log('***** there was an error getting request token *****');
                 console.log(err);
                 cb(1,null)
                 return;
@@ -197,6 +197,80 @@ var getToken = function (cb){
     })
 }
 module.exports.getToken = getToken;
+
+  // refresh token
+var refreshToken = function (user_token,user_token_secret,user_session_handle cb){
+  slackr_utils.generateNonce(function(nonce){
+    var response = ''
+ 
+    var postData = querystring.stringify({
+      'oauth_nonce' : nonce,
+      'oauth_timestamp' : new Date().getTime(),
+      'oauth_consumer_key' : consumerKey,
+      'oauth_signature_method' : 'plaintext',
+      'oauth_signature' : consumerSecret+'&'+user_token_secret,
+      'oauth_version' : '1.0',
+      'xoauth_lang_pref' : "en-us", 
+      'oauth_token' : user_token,
+      'oauth_session_handle' : user_session_handle
+    });
+ 
+    var postOptions = {
+      host: 'api.login.yahoo.com',
+      port: 443,
+      path: '/oauth/v2/get_request_token',
+      method: 'POST',
+      headers: {
+        'Content-Type' :'application/x-www-form-urlencoded',
+        'Content-length' : postData.length
+      }
+    };
+ 
+    var postReq = https.request(postOptions, function(res){
+      res.setEncoding('utf8');
+      res.on('data',function(chunk){
+        console.log('data');
+        response += chunk;
+      });
+      res.on('end',function(){
+        console.log('got request token');
+        var resObj = querystring.parse(response)
+
+        // check response for valid response
+        // if oauth variables are undefined, respond error
+        var expectedResponse = ["oauth_token","oauth_token_secret","xoauth_request_auth_url"];
+        var count = 0;
+        function checkExpectedResponse(){
+          if(typeof resObj[count] == null){
+            cb(1,null)
+          } else {
+            if (count >= expectedResponse.length-1){
+              cb(null,resObj.oauth_token,resObj.oauth_token_secret,resObj.xoauth_request_auth_url);	
+              return
+            } else {
+              count++;
+              checkExpectedResponse();
+            }
+          }
+        }
+
+        // if function gets here, there's been problem
+        cb(1,null);
+        return;
+      });
+      res.on('error',function(err){
+        console.log('***** there was an error refreshing token *****');
+        console.log(err);
+        cb(1,null)
+        return;
+      })
+    });
+
+    postReq.write(postData);
+    postReq.end();
+  });
+}
+module.exports.refreshToken = refreshToken;
 
     // part 2 of oauth; exchanges verifier for access token
 var getAccess = function(dataFromYahooCallback,storedData,cb){
@@ -236,7 +310,7 @@ var getAccess = function(dataFromYahooCallback,storedData,cb){
                 cb(null,querystring.parse(response))
             });
             oauth_res.on('error',function(err){
-                console.log('***** there was an error *****');
+                console.log('***** there was an error getting access token *****');
                 console.log(err);
                 cb(1,null)
                 return;
