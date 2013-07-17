@@ -254,58 +254,70 @@ function logout(req, res) {
 }
 
 	// creates user in database and begins oauth process, sends link to yahoo auth page if successful
-function createUser(req, res, data) {
-	var uname = "fantasyuser:" + data.signup_uname;
-    client.exists(uname, function (ex, r) {
-        console.log(r);
-        if (r == 1) {
-        	templates.sendErrorResponse(res,"Account already exists for "+data.signup_uname,"Please try a different username")
-		return;
-        } else {
-            slackr_utils.requestHash(function (hash_salt) {
-                var hashed_pass_and_salt = crypto.createHash('md5').update(data.signup_pass + hash_salt).digest('hex');
-                oauth.getToken(function(oauth_err,oauth){
-                	if (oauth_err == null){
-	                	setTemporaryToken(oauth.oauth_token,oauth.oauth_token_secret,data.signup_uname);
-		                var user_setup = {
-		                    name: data.signup_uname,
-		                    email: data.signup_email,
-		                    pass: hashed_pass_and_salt,
-		                    salt: hash_salt,
-		                    oauth_token: oauth.oauth_token,
-		                    oauth_token_secret: oauth.oauth_token_secret,
-		                    xoauth_request_auth_url: oauth.xoauth_request_auth_url
-		                };
-		                console.log(user_setup);
-		                var udata = JSON.stringify(user_setup);
-		                
-		                client.set(uname, udata, function (err, rr) {
-		                    if (err) {
-		                    	templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
-		            			return;
-		                    } else {
-	                    		var d = {
-					    			uname: user_setup.name,
-					    			url: user_setup.xoauth_request_auth_url
-						    	}
-						    	var html = ''
-						    	mu.compileAndRender('successpage.html', d).on('data', function (data) {
-								    html += data.toString();
-							  	}).on('end', function(){
-							  		res.writeHead(200);
-								    res.end(html);
-							  	});
-			                    return;
-		                    }
-		                });
-		            } else {
-		            	templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
-		            	return;
-		            }
+function createUser(req, res, uname, upass, uemail) {
+  var redisUname = "fantasyuser:" + uname;
+
+    // check if user already exists
+  client.exists(redisUname, function (ex, r) {
+    if (r == 1) {
+      templates.sendErrorResponse(res,"Account already exists for "+uname,"Please try a different username")
+      return;
+    } else {
+
+      // create salt+hased password
+      slackr_utils.requestHash(function (hash_salt) {
+        var hashed_pass_and_salt = crypto.createHash('md5').update(upass + hash_salt).digest('hex');
+
+        // request the request token from yahoo
+        oauth.getToken(function(oauth_err,oauth_token,oauth_token_secret,oauth_url){
+          if (oauth_err != null){
+            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
+            return;
+          } else {
+
+            // store request token, token secret, and username for later lookup
+            setTemporaryToken(oauth_token,oauth_token_secret,uname);
+
+            // create user object to be stored
+            var user_setup = {
+              name: uname,
+              email: uemail,
+              pass: hashed_pass_and_salt,
+              salt: hash_salt,
+              oauth_token: oauth_token,
+              oauth_token_secret: oauth_token_secret,
+              xoauth_request_auth_url: oauth_url
+            };
+
+            var udata = JSON.stringify(user_setup);
+
+            // store user object
+            client.set(uname, udata, function (err, rr) {
+
+              // send success or error page
+              if (err) {
+                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
+                return;
+              } else {
+                var d = {
+                  uname: uname,
+                  url: oauth_url
+                }
+                var html = ''
+                mu.compileAndRender('successpage.html', d).on('data', function (data) {
+                  html += data.toString();
+                }).on('end', function(){
+                  res.writeHead(200);
+                  res.end(html);
                 });
+                return;
+              }
             });
-        }
-    });
+          }
+        });
+      });
+    }
+  });
 }
 
 
@@ -333,7 +345,11 @@ function signupFormHandler(req,res){
 		fullbody += chunk
 	});
 	req.on('end',function(){
-		createUser(req,res,querystring.parse(fullbody));
+		var formData = querystring.parse(fullbody);
+		var uname = formData.signup_uname;
+		var upass = formData.signup_pass;
+		var uemail = signup_email;
+		createUser(req,res,uname,upass,uemail);
 		return;
 	})
 }
