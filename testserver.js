@@ -71,22 +71,7 @@ function invalidSession(req,res){
         res.end(html);
         return;
     }); 
-}
-var mimeType = {
-    '.js': 'text/javascript',
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.jpg': 'image/jpeg',
-    '.png': 'image/png',
-    '.json': 'application/json',
-    '.svg': 'image/svg+xml',
-    '.ttf': 'application/x-font-ttf',
-    '.otf': 'application/x-font-opentype',
-    '.woff': 'application/x-font-woff',
-    '.eot': 'application/vnd.ms-fontobject',
-    '': 'text/html'
-};
- 
+} 
 var consumerKey,consumerSecret;
 
 	// separte server hosts oauth consumerKey and consumerSecret. only accessable locally
