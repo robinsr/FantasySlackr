@@ -138,49 +138,58 @@ function handleApiCallback(req,res){
     client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
         if (err){
             appMonitor("error","failed to find token in database. step 2 of oauth")
-            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later","err 001");
             return
         } else {
             var storedData = JSON.parse(result);
             oauth.getAccess(dataFromYahooCallback,storedData,function(err,oauthResponse){
                 if (err){
-                    templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+                    templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 002");
                     console.log('***** there was an error *****');
                     console.log(err);
                 } else {
                     client.get("fantasyuser:"+storedData.username,function(db_err,dat){
                         if (db_err){
-                            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+                            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 003");
                         } else {
                             var userdata = JSON.parse(dat);
                             console.log('oauthResponse');
                             console.log(oauthResponse);
-                            userdata.oauth_access_token = oauthResponse.oauth_token;
-                            userdata.oauth_access_token_secret = oauthResponse.oauth_token_secret;
-                            userdata.oauth_session_handle = oauthResponse.oauth_session_handle;
-                            userdata.xoauth_yahoo_guid = oauthResponse.xoauth_yahoo_guid;
-                            client.set("fantasyuser:"+storedData.username,JSON.stringify(userdata),function(err){
-                                if (err){
-                                    templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
-                                } else {
-                                    var session_key = "session:"+storedData.username;
-                                    slackr_utils.requestHash(function(session_val){
-                                        client.set(session_key, session_val, function () {
-                                        client.expire(session_key, 1800);
-                                        res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
-                                        res.end();
-                                        client.del("fantasy:oauth:"+dataFromYahooCallback.oauth_token);
-                                        return;
-                                        });
-                                    });
-                                }
-                            });                          
+
+                            if (typeof oauthResponse.oauth_problem != null){
+                                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 004");
+                            } else {
+                                storeOauthData(userdata,oauthResponse);
+                                res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
+                                res.end();
+                            }                       
                         }
                     });
                 }
             });                         
         }
     });    
+}
+
+function storeOauthData(userdata,oauthResponse){
+    userdata.oauth_access_token = oauthResponse.oauth_token;
+    userdata.oauth_access_token_secret = oauthResponse.oauth_token_secret;
+    userdata.oauth_session_handle = oauthResponse.oauth_session_handle;
+    userdata.xoauth_yahoo_guid = oauthResponse.xoauth_yahoo_guid;
+    client.set("fantasyuser:"+storedData.username,JSON.stringify(userdata),function(err){
+        if (err){
+            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later");
+        } else {
+            var session_key = "session:"+storedData.username;
+            slackr_utils.requestHash(function(session_val){
+                client.set(session_key, session_val, function () {
+                client.expire(session_key, 1800);
+                
+                client.del("fantasy:oauth:"+dataFromYahooCallback.oauth_token);
+                return;
+                });
+            });
+        }
 }
 
 	// sets session keys for users and (in future) get new oauth token
