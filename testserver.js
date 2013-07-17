@@ -11,7 +11,7 @@ var http = require('http'),
     utils = require('util'),
     serveStatic = require('./serveStatic'),
     slackr_utils = require('./slackr_utils'),
-    template = require('./templates');
+    templates = require('./templates');
 
 mu.root = __dirname + '/'
  
