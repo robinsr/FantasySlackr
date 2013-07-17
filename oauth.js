@@ -178,7 +178,7 @@ var getToken = function (cb){
 module.exports.getToken = getToken;
 
     // part 2 of oauth; exchanges verifier for access token
-var getAccess = function(dataFromYahooCallback,cb){
+var getAccess = function(dataFromYahooCallback,storedData,cb){
     slackr_utils.generateNonce(function(nonce){
         var response = ''
         var postData = querystring.stringify({
