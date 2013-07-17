@@ -1,4 +1,5 @@
-var fs = require('fs');
+var fs = require('fs'),
+    path = require('path');
 
     // handles static content - usually passed off to nginx after dev is complete
 
