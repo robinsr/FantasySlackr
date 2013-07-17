@@ -10,7 +10,8 @@ var http = require('http'),
     mu = require('mu2'),
     utils = require('util'),
     serveStatic = require('./serveStatic'),
-    slackr_utils = require('./slackr_utils');
+    slackr_utils = require('./slackr_utils'),
+    template = require('./templates');
 
 mu.root = __dirname + '/'
  
@@ -44,21 +45,6 @@ function validateSession(n, s, cb) {
         });
     }
 }
-function invalidSession(req,res){
-    var d = {
-        header: "You're session expired",
-        message1: "If you're seeing this a lot, we're probably doing something wrong",
-        message2: "<p>Click <a href='/FantasyAutomate'>here</a> to login again</p>"
-    }
-    var html = ''
-    mu.compileAndRender('genericMessagePage.html', d).on('data', function (data) {
-        html += data.toString();
-    }).on('end', function(){
-        res.writeHead(200);
-        res.end(html);
-        return;
-    }); 
-} 
 var consumerKey,consumerSecret;
 
 	// separte server hosts oauth consumerKey and consumerSecret. only accessable locally
@@ -153,7 +139,7 @@ function constructDashboard(req,res){
                 } 
             });	
 		} else {
-            invalidSession(req,res);
+            templates.invalidSession(req,res);
             return;
         }
 	})
