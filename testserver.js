@@ -10,6 +10,7 @@ var http = require('http'),
     client = redis.createClient(),
     mu = require('mu2'),
     utils = require('util');
+    serveStatic = require('./serveStatis.js');
 
 mu.root = __dirname + '/'
  
@@ -592,32 +593,6 @@ function signupFormHandler(req,res){
 	})
 }
  
-	// handles static content - usually passed off to nginx after dev is complete
-function serveStatic(req, res) {
-    var filePath = '.' + req.url;
-    if (filePath == './') {
-        filePath = './login.html';
-    }
-    fs.exists(filePath, function (exists) {
-        if (exists) {
- 
-            fs.readFile(filePath, function (error, content) {
-                if (error) {
-                    res.writeHead(500, { 'Content-Type': 'text/plain' });
-                    res.end();
-                }
-                else {
-                    res.writeHead(200, { 'Content-Type': mimeType[path.extname(filePath)] });
-                    res.end(content, 'utf-8');
-                }
-            });
-        }
-        else {
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
-            res.end('404 - Not Found - '+filePath);
-        }
-    });
-}
  
  	// handles incoming http requests
 function handler(req,res){
@@ -646,7 +621,7 @@ function handler(req,res){
     } else if (p =='/testRequest'){
         
     } else {
-        serveStatic(req,res);
+        serveStatic.serveStatic(req,res);
         return
     }
 }
