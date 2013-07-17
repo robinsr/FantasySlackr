@@ -14,7 +14,8 @@ var invalidSession = function (req,res){
         res.end(html);
         return;
     }); 
-} 
+}
+module.exports.invalidSession = invalidSession;
     // generic error page with 2 custom messages
 var sendErrorResponse = function (res,message1,message2,message3){
     var html = '';
@@ -25,6 +26,17 @@ var sendErrorResponse = function (res,message1,message2,message3){
         res.end(html);
     });
 }
-
-module.exports.invalidSession = invalidSession;
 module.exports.sendErrorResponse = sendErrorResponse;
+var sendGenericMessage = function(res,message1,message2,message3){
+    var html = ''
+    mu.compileAndRender('genericMessagePage.html',{ message1: message1, message2: message2, message3: message3 }).on('data', function (data) {
+        html += data.toString();
+    }).on('end', function(){
+        res.writeHead(200);
+        res.end(html);
+        return;
+    }); 
+}
+module.exports.sendGenericMessage = sendGenericMessage;
+
+
