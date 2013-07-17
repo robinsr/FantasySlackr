@@ -1,6 +1,8 @@
 var http = require('http'),
+    https = require('https'),
     slackr_utils = require('./slackr_utils'),
-    fs = require('fs');
+    fs = require('fs'),
+    querystring = require('querystring');
 
 	// separte server hosts oauth consumerKey and consumerSecret. only accessable locally
 (function(){
