@@ -57,9 +57,9 @@ function constructDashboard(req,res){
 	validateSession(query.user,query.sess,function(sessionValid){
 		if (sessionValid){
             client.get('fantasyuser:'+query.user,function(err,result){
-
                 if (err || (result == null)){
-                    templates.sendErrorResponse(res,"We're having some problems.","Please try again later.");
+                    templates.sendErrorResponse(res,"We're having some problems.","Please try again later.","err010");
+					appMonitor.sendMessage("error","err010, db read error");
                 } else {
                     var userData = JSON.parse(result);
                     if (userData.oauth_access_token && userData.oauth_access_token_secret){
@@ -68,7 +68,8 @@ function constructDashboard(req,res){
 
                         oauth.callYahoo('http://fantasysports.yahooapis.com/fantasy/v2/league/314.l.148766','GET',t,ts,function(err,response){
                             if (err){
-                                templates.sendErrorResponse(res,"There was an error getting info from yahoo","Please try again later");
+                                templates.sendErrorResponse(res,"There was an error getting info from yahoo","Please try again later","err009");
+								appMonitor.sendMessage("error","err009, error getting info from yahoo");
                             } else {
                                 res.writeHead(200);
                                 res.end(utils.inspect(response));
@@ -112,18 +113,21 @@ function handleApiCallback(req,res){
         if (err){
             appMonitor.sendMessage("error","failed to find token in database. step 2 of oauth")
             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later","err 001 - db error");
+			appMonitor.sendMessage("error","err001, failed to find token in database");
             return
         } else {
             var storedData = JSON.parse(result);
             oauth.getAccess(dataFromYahooCallback,storedData,function(err,oauthResponse){
                 if (err){
                     templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 002 - oauth connection problem");
+					appMonitor.sendMessage("error","err002, oauth connection problem");
                     console.log('***** there was an error *****');
                     console.log(err);
                 } else {
                     client.get("fantasyuser:"+storedData.username,function(db_err,dat){
                         if (db_err){
                             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 003 - db error");
+							appMonitor.sendMessage("error","err003, redis could not get users info");
                         } else {
                             var userdata = JSON.parse(dat);
                             console.log('oauthResponse');
@@ -131,6 +135,7 @@ function handleApiCallback(req,res){
 
                             if (typeof oauthResponse.oauth_problem != null){
                                 templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 004 - oauth problem");
+								appMonitor.sendMessage("error","err004, yahoo responded with oauth_problem");
                             } else {
                                 storeOauthData(userdata,oauthResponse);
                                 res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
@@ -152,6 +157,7 @@ function storeOauthData(userdata,oauthResponse){
     client.set("fantasyuser:"+storedData.username,JSON.stringify(userdata),function(err){
         if (err){
             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 005");
+			appMonitor.sendMessage("error","err005, redis could not store users oauth");
         } else {
             var session_key = "session:"+storedData.username;
             slackr_utils.requestHash(function(session_val){
@@ -172,6 +178,8 @@ function login(req, res, data) {
     client.get(uname, function (err, r) {
         if (err) {
             console.log('error');
+			templates.sendErrorResponse(res,"There was an error logging into your account","Please try again later", "err 008");
+			appMonitor.sendMessage("error","login, redis could not get user data");
         } else {
             if (r !== null) {
                 var user_object = JSON.parse(r);
@@ -211,7 +219,9 @@ function logout(req, res) {
 	var query = qs.parse(nodeurl.parse(req.url).query);
     var uname = "session:" + query.n;
     client.get(uname, function (err, c) {
-        if (err) throw err;
+        if (err) {
+			appMonitor.sendMessage('error','logout1, redis error');
+		}
         if (c) {
             client.del(uname, function () {
         	var d = {
@@ -253,6 +263,7 @@ function createUser(req, res, uname, upass, uemail) {
         oauth.getToken(function(oauth_err,oauth_token,oauth_token_secret,oauth_url){
           if (oauth_err != null){
             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
+			appMonitor.sendMessage('error','err006, getToken responsed with error');
             return;
           } else {
 
@@ -277,7 +288,8 @@ function createUser(req, res, uname, upass, uemail) {
 
               // send success or error page
               if (err) {
-                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
+                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 007");
+				appMonitor.sendMessage('error','err007, redis error storing user object');
                 return;
               } else {
                 var d = {
