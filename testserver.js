@@ -12,7 +12,8 @@ var http = require('http'),
     serveStatic = require('./serveStatic'),
     slackr_utils = require('./slackr_utils'),
     templates = require('./templates'),
-    oauth = require('./oauth');
+    oauth = require('./oauth'),
+	appMonitor = require('./appMonitor');
 
 mu.root = __dirname + '/'
  
@@ -49,28 +50,7 @@ function validateSession(n, s, cb) {
 var consumerKey,consumerSecret;
 
 
-function appMonitor(level,message){
-    var postData = {
-    	level: level,
-    	message: message
-    }
-    var postOptions = {
-        host: '127.0.0.1',
-        port: 8135,
-		path: 'fantasyslackr',
-        method: 'POST',
-        headers: {
-            'Content-Type' :'application/json'
-        }
-    };
-    var keyReq = http.request(postOptions,function(res){
-        res.on('end',function(){
-            console.log("sent to App Monitor: ",level,message);
-        });
-    });
-    keyReq.write(postData);
-    keyReq.end();
-}
+
 
 function constructDashboard(req,res){
 	var query = qs.parse(nodeurl.parse(req.url).query);
@@ -130,7 +110,7 @@ function handleApiCallback(req,res){
         // find token_secret in db
     client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
         if (err){
-            appMonitor("error","failed to find token in database. step 2 of oauth")
+            appMonitor.sendMessage("error","failed to find token in database. step 2 of oauth")
             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later","err 001 - db error");
             return
         } else {
