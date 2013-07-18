@@ -341,7 +341,7 @@ function signupFormHandler(req,res){
 		var formData = querystring.parse(fullbody);
 		var uname = formData.signup_uname;
 		var upass = formData.signup_pass;
-		var uemail = signup_email;
+		var uemail = formData.signup_email;
 		createUser(req,res,uname,upass,uemail);
 		return;
 	})
