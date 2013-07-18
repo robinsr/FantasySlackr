@@ -19,7 +19,7 @@ var sendMessage = function(level,message){
             console.log("sent to App Monitor: ",level,message);
         });
     });
-    keyReq.write(postData);
+    keyReq.write(JSON.stringify(postData));
     keyReq.end();
 }
 
