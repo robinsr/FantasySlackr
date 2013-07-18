@@ -15,6 +15,7 @@ var sendMessage = function(level,message){
         }
     };
     var keyReq = http.request(postOptions,function(res){
+    	res.on('data',fuction(c){});
         res.on('end',function(){
             console.log("sent to App Monitor: ",level,message);
         });
