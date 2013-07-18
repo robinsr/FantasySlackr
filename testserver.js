@@ -57,6 +57,7 @@ function appMonitor(level,message){
     var postOptions = {
         host: '127.0.0.1',
         port: 8135,
+		path: 'fantasyslackr',
         method: 'POST',
         headers: {
             'Content-Type' :'application/json'
