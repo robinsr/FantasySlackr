@@ -199,7 +199,7 @@ var getToken = function (cb){
 module.exports.getToken = getToken;
 
   // refresh token
-var refreshToken = function (user_token,user_token_secret,user_session_handle cb){
+var refreshToken = function (user_token,user_token_secret,user_session_handle,cb){
   slackr_utils.generateNonce(function(nonce){
     var response = ''
  
