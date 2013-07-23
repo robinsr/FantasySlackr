@@ -3,7 +3,8 @@ var http = require('http'),
     slackr_utils = require('./slackr_utils'),
     fs = require('fs'),
     querystring = require('querystring'),
-    crypto = require('crypto');
+    crypto = require('crypto'),
+    appMonitor = require('./appMonitor');
 
 	// separte server hosts oauth consumerKey and consumerSecret. only accessable locally
 (function(){
@@ -160,29 +161,15 @@ var getToken = function (cb){
             });
             res.on('end',function(){
                 console.log('got request token');
-                var resObj = querystring.parse(response)
+                var resObj = querystring.parse(response);
+                appMonitor.sendMessage('oauth','get token response: '+JSON.stringify(resObj));
                 
                 	// check response for valid response
-                	// if oauth variables are undefined, respond error
-                var expectedResponse = ["oauth_token","oauth_token_secret","xoauth_request_auth_url"];
-                var count = 0;
-                function checkExpectedResponse(){
-                	if(typeof resObj[count] == null){
-                		cb(1,null)
-                	} else {
-                		if (count >= expectedResponse.length-1){
-                			cb(null,resObj.oauth_token,resObj.oauth_token_secret,resObj.xoauth_request_auth_url);	
-                			return
-                		} else {
-                			count++;
-                			checkExpectedResponse();
-                		}
-                	}
+                if(typeof resObj.oauth_token == 'undefined'){
+                    cb(1,null)
+                } else {
+                    cb(null,resObj.oauth_token,resObj.oauth_token_secret,resObj.xoauth_request_auth_url);   
                 }
-                
-                	// if function gets here, there's been problem
-        	cb(1,null);
-                return;
             })
             res.on('error',function(err){
                 console.log('***** there was an error getting request token *****');
@@ -238,26 +225,12 @@ var refreshToken = function (user_token,user_token_secret,user_session_handle,cb
         var resObj = querystring.parse(response)
 
         // check response for valid response
-        // if oauth variables are undefined, respond error
-        var expectedResponse = ["oauth_token","oauth_token_secret","xoauth_request_auth_url"];
-        var count = 0;
-        function checkExpectedResponse(){
-          if(typeof resObj[count] == null){
-            cb(1,null)
-          } else {
-            if (count >= expectedResponse.length-1){
-              cb(null,resObj.oauth_token,resObj.oauth_token_secret,resObj.xoauth_request_auth_url);	
-              return
-            } else {
-              count++;
-              checkExpectedResponse();
-            }
-          }
-        }
 
-        // if function gets here, there's been problem
-        cb(1,null);
-        return;
+        if(typeof resObj.oauth_token == 'undefined'){
+            cb(1,null)
+        } else {
+            cb(null,resObj.oauth_token,resObj.oauth_token_secret,resObj.xoauth_request_auth_url);	
+        }
       });
       res.on('error',function(err){
         console.log('***** there was an error refreshing token *****');
@@ -286,6 +259,7 @@ var getAccess = function(dataFromYahooCallback,storedData,cb){
             'oauth_verifier': dataFromYahooCallback.oauth_verifier,
             'oauth_token' : dataFromYahooCallback.oauth_token
         });
+        console.log(postData);
 
         var postOptions = {
             host: 'api.login.yahoo.com',
