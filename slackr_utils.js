@@ -1,7 +1,7 @@
 var crypto = require('crypto');
 
 var generateNonce = function(cb){
-    crypto.randomBytes(48, function(ex, buf) {
+    crypto.randomBytes(16, function(ex, buf) {
         cb(buf.toString('hex'));
         return
     });

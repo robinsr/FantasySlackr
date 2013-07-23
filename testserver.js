@@ -105,6 +105,7 @@ function setTemporaryToken(token,secret,username){
 }
 
 
+	// exchanges req token and tok verifier for access token 
 function handleApiCallback(req,res){
     var dataFromYahooCallback = qs.parse(nodeurl.parse(req.url).query);     
            
@@ -133,7 +134,7 @@ function handleApiCallback(req,res){
                             console.log('oauthResponse');
                             console.log(oauthResponse);
 
-                            if (typeof oauthResponse.oauth_problem != null){
+                            if (typeof oauthResponse.oauth_problem != 'undefined'){
                                 templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 004 - oauth problem");
 								appMonitor.sendMessage("error","err004, yahoo responded with oauth_problem");
                             } else {
@@ -346,7 +347,32 @@ function signupFormHandler(req,res){
 		return;
 	})
 }
- 
+function ajaxLogin(req,res){
+    var bodyText = '';
+    req.on('data',function(chunk){
+        bodyText += chunk;
+    })
+    req.on('end',function(){
+        var userdata = JSON.parse(bodyText);
+
+        client.get("fantasyuser:"+userdata.name,function(err,c){
+            if (err) {
+                res.writeHead(500);
+                res.end("no user account found")
+            } else {
+                slackr_utils.requestHash(function(hash){
+                    var dat = {
+                        session: hash
+                    }
+                })
+                res.writeHead(200);
+                res.end(JSON.stringify(dat));
+            }
+        })
+        userdata.name
+        userdata.password
+    })
+}
  
  	// handles incoming http requests
 function handler(req,res){
@@ -373,6 +399,11 @@ function handler(req,res){
 		logoutSuccess(req,res);
 		return;
     } else if (p =='/testRequest'){
+
+    } else if (p == '/method/login'){
+        login(req,res);
+        return
+    }
         
     } else {
         serveStatic.serveStatic(req,res);

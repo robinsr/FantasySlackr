@@ -1,7 +1,8 @@
 var http = require('http');
 
 var sendMessage = function(level,message){
-    console.log('starting error report')
+    message = message.replace(/\"/g,'');
+    console.log('starting error report: '+message)
     var postData = {
     	level: level,
     	message: message
@@ -17,7 +18,6 @@ var sendMessage = function(level,message){
     };
     var keyReq = http.request(postOptions,function(errorRes){
         console.log('starting request');
-        console.log(keyReq.url);
         }).on('end',function(){
             console.log("sent to App Monitor: ",level,message);
         }).on('data',function(c){
