@@ -10,7 +10,7 @@ var sendMessage = function(level,message){
     var postOptions = {
         host: 'localhost',
         port: 8136,
-		path: '/fantasyslackr',
+	path: '/fantasyslackr',
         method: 'POST',
         headers: {
             'Content-Type' :'application/json'
