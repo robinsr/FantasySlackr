@@ -5,8 +5,10 @@ var fantasyFlackrUtils = (function() {
 
 
         $.ajax({
-              url: url,
+              url: "method/login",
               type: 'POST',
+              dataType: "json",
+              processData: false,
         contentType: 'application/json',
               data: JSON.stringify(postData),
               error: function(){

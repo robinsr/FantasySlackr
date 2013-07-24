@@ -12,7 +12,8 @@ var http = require('http'),
     serveStatic = require('./serveStatic'),
     slackr_utils = require('./slackr_utils'),
     templates = require('./templates'),
-    oauth = require('./oauth'),
+    //oauth = require('./oauth'),
+    oauth = require('./oauthtest'),
 	appMonitor = require('./appMonitor');
 
 mu.root = __dirname + '/'
@@ -47,7 +48,7 @@ function validateSession(n, s, cb) {
         });
     }
 }
-var consumerKey,consumerSecret;
+
 
 
 
@@ -63,10 +64,10 @@ function constructDashboard(req,res){
                 } else {
                     var userData = JSON.parse(result);
                     if (userData.oauth_access_token && userData.oauth_access_token_secret){
-                        t = userData.oauth_access_token;
-                        ts = userData.oauth_access_token_secret;
+                        t = userData.access_token;
+                        ts = userData.access_token_secret;
 
-                        oauth.callYahoo('http://fantasysports.yahooapis.com/fantasy/v2/league/314.l.148766','GET',t,ts,function(err,response){
+                        oauth.getYahoo('http://fantasysports.yahooapis.com/fantasy/v2/league/314.l.148766',t,ts,function(err,response){
                             if (err){
                                 templates.sendErrorResponse(res,"There was an error getting info from yahoo","Please try again later","err009");
 								appMonitor.sendMessage("error","err009, error getting info from yahoo");
@@ -107,10 +108,10 @@ function setTemporaryToken(token,secret,username){
 
 	// exchanges req token and tok verifier for access token 
 function handleApiCallback(req,res){
-    var dataFromYahooCallback = qs.parse(nodeurl.parse(req.url).query);     
+    var yahooCb = qs.parse(nodeurl.parse(req.url).query);     
            
         // find token_secret in db
-    client.get("fantasy:oauth:"+dataFromYahooCallback.oauth_token,function(err,result){
+    client.get("fantasy:oauth:"+yahooCb.oauth_token,function(err,result){
         if (err){
             appMonitor.sendMessage("error","failed to find token in database. step 2 of oauth")
             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later","err 001 - db error");
@@ -118,7 +119,17 @@ function handleApiCallback(req,res){
             return
         } else {
             var storedData = JSON.parse(result);
-            oauth.getAccess(dataFromYahooCallback,storedData,function(err,oauthResponse){
+            //oauth.getAccess(yahooCb,storedData,function(err,oauthResponse){
+
+            // begin brevity...
+            var getT = yahooCb.oauth_token,
+                getV = yahooCb.oauth_verifier,
+                getS = storedData.oauth_token_secret;
+            // end brevity
+
+            appMonitor.sendMessage('debug','secret going to getAccess: '+getS);
+
+            oauth.getAccess(getT,getV,getS,function(err,token,secret,result){
                 if (err){
                     templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 002 - oauth connection problem");
 					appMonitor.sendMessage("error","err002, oauth connection problem");
@@ -132,16 +143,16 @@ function handleApiCallback(req,res){
                         } else {
                             var userdata = JSON.parse(dat);
                             console.log('oauthResponse');
-                            console.log(oauthResponse);
+                            console.log(token);
+                            userdata.access_token = token;
+                            userdata.access_token_secret = secret;
+                            userdata.session_handle = result.oauth_session_handle;
+                            userdata.guid = result.xoauth_yahoo_guid;
 
-                            if (typeof oauthResponse.oauth_problem != 'undefined'){
-                                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 004 - oauth problem");
-								appMonitor.sendMessage("error","err004, yahoo responded with oauth_problem");
-                            } else {
-                                storeOauthData(userdata,oauthResponse);
+                            slackr_utils.requestHash(function(session_val){
                                 res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
-                                res.end();
-                            }                       
+                                res.end(); 
+                            });                    
                         }
                     });
                 }
@@ -285,7 +296,7 @@ function createUser(req, res, uname, upass, uemail) {
             var udata = JSON.stringify(user_setup);
 
             // store user object
-            client.set(uname, udata, function (err, rr) {
+            client.set("fantasyuser:"+uname, udata, function (err, rr) {
 
               // send success or error page
               if (err) {
@@ -401,9 +412,9 @@ function handler(req,res){
     } else if (p =='/testRequest'){
 
     } else if (p == '/method/login'){
+        console.log("ajax call to login");
         login(req,res);
         return
-    }
         
     } else {
         serveStatic.serveStatic(req,res);
