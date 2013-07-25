@@ -57,13 +57,6 @@ function constructDashboard(req,res){
 	})
 }
 
-
-
-
-
-
-
-
 	// exchanges req token and tok verifier for access token 
 function handleApiCallback(req,res){
     var yahooCb = qs.parse(nodeurl.parse(req.url).query);     
@@ -99,10 +92,10 @@ function handleApiCallback(req,res){
 
     // STORES OAUTH ACCESS TOKEN
                     var newdata = {
-                        access_token = token;
-                        access_token_secret = secret;
-                        session_handle = result.oauth_session_handle;
-                        guid = result.xoauth_yahoo_guid;
+                        access_token: token,
+                        access_token_secret: secret,
+                        session_handle: result.oauth_session_handle,
+                        guid: result.xoauth_yahoo_guid
                     }
 
                     db.updateUserDb(storedData.username,newdata,function(db_err,dat){
@@ -127,7 +120,7 @@ function handleApiCallback(req,res){
 }
 
 	// sets session keys for users and (in future) get new oauth token
-function login(req, res, data) {
+function login(req, res, data, cb) {
     var p = /[0-9a-f]{32}/
     var uname = "fantasyuser:" + data.uname;
 
@@ -143,15 +136,16 @@ function login(req, res, data) {
     // CHECKS IF PASSWORD MATCHES HASH
             if (r !== null) {
                 var user_object = JSON.parse(r);
-                var return_object = {};
                 var concat_pass = data.pass + user_object.salt;
                 var hashed_pass = crypto.createHash('md5').update(concat_pass).digest('hex');
                 if (hashed_pass == user_object.pass) {
 
     // SETS SESSION - needs token to set session
 
-                    db.createSession(uname,token,function(session_val){
-                        return_object.sessionid = session_val;
+                    db.createSession(uname,token,function(err,session_val){
+                        var return_object = {
+                            sessionid : session_val
+                        }
                         res.writeHead(200, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify(return_object));
                         return;
@@ -169,6 +163,7 @@ function login(req, res, data) {
         }
     })
 }
+
 function logout(req, res) {
 	var query = qs.parse(nodeurl.parse(req.url).query);
     db.destroySession(query.n,function(er){
@@ -182,8 +177,46 @@ function logout(req, res) {
     });        
 }
 
+function ajaxCreateUser(req,res){
+    var bodyText = '';
+    req.on('data',function(chunk){
+        bodyText += chunk;
+    })
+    req.on('end',function(){
+        var dat = JSON.parse(bodyText);
+        if (dat.uname && dat.upass && dat.uemail){
+            createUser(req,res,dat.uname,dat.upass,dat.uemail);
+            return
+        } else {
+            var dat = {
+                error: "missing username, password, and/or user email"
+            }
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(dat));
+            return
+        }
+    });
+}
+function formSubmitCreateUser(req,res){
+    console.log('signup form accepted');
+    var fullbody = '';
+
+    req.on('data', function(chunk){
+        fullbody += chunk
+    });
+    req.on('end',function(){
+        var formData = querystring.parse(fullbody);
+        var uname = formData.signup_uname;
+        var upass = formData.signup_pass;
+        var uemail = formData.signup_email;
+        createUser(req,res,uname,upass,uemail);
+        return;
+    });
+}
+
 	// creates user in database and begins oauth process, sends link to yahoo auth page if successful
 function createUser(req, res, uname, upass, uemail) {
+    console.log(uname,upass,uemail);
 
     // check if user already exists
   db.checkIfUserExists(uname, function (ex, r) {
@@ -243,22 +276,6 @@ function createUser(req, res, uname, upass, uemail) {
 }
 
 
-function signupFormHandler(req,res){
-	console.log('signup form accepted');
-	var fullbody = '';
-
-	req.on('data', function(chunk){
-		fullbody += chunk
-	});
-	req.on('end',function(){
-		var formData = querystring.parse(fullbody);
-		var uname = formData.signup_uname;
-		var upass = formData.signup_pass;
-		var uemail = formData.signup_email;
-		createUser(req,res,uname,upass,uemail);
-		return;
-	})
-}
 function ajaxLogin(req,res){
     var bodyText = '';
     req.on('data',function(chunk){
@@ -267,25 +284,68 @@ function ajaxLogin(req,res){
     req.on('end',function(){
         var userdata = JSON.parse(bodyText);
 
-        db.getFromUserDb(userdata.name,function(err,c){
-            if (err) {
-                res.writeHead(500);
-                res.end("no user account found")
-            } else {
-                slackr_utils.requestHash(function(hash){
+        if (userdata.uname && userdata.pass){
+            db.getFromUserDb(userdata.uname,function(err,r){
+                if (err) {
                     var dat = {
-                        session: hash
+                        error: "database error"
                     }
-                })
-                res.writeHead(200);
-                res.end(JSON.stringify(dat));
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(dat));
+                    return
+                } else {
+                    if (r !== null) {
+                        var user_object = JSON.parse(r);
+                        var concat_pass = userdata.pass + user_object.salt;
+                        var hashed_pass = crypto.createHash('md5').update(concat_pass).digest('hex');
+                        console.log(concat_pass);
+                        if (hashed_pass == user_object.pass) {
+                            db.createSession(user_object.name,"sampletoken",function(err,hash){
+                                if (err) {
+                                    var dat = {
+                                        error: "could not create session"
+                                    }
+                                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify(dat));
+                                    return
+                                } else {
+                                    var dat = {
+                                        session:hash
+                                    }
+                                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify(dat));
+                                    return
+                                }
+                            });
+                        } else {
+                            console.log('really, invalid password')
+                            var dat = {
+                                error: 'Invalid Username or Password'
+                            }
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify(dat));
+                            return;
+                        }
+                    } else {
+                        var dat = {
+                            error: "no user account found"
+                        }
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(dat));
+                        return
+                    }
+                }
+            });
+        } else {
+            console.log('userdata bad');
+            var dat = {
+                error: 'Invalid Username or Password'
             }
-        })
-
-        
-        userdata.name
-        userdata.password
-    })
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(dat));
+            return;
+        }
+    });
 }
  
  	// handles incoming http requests
@@ -298,7 +358,7 @@ function handler(req,res){
         	handleApiCallback(req,res);
         	return;
 	} else if (p == '/signupForm'){
-		signupFormHandler(req,res);
+		formSubmitCreateUser(req,res);
 		return;
 	} else if (p == '/dashboard'){
 		constructDashboard(req,res);
@@ -312,10 +372,11 @@ function handler(req,res){
     } else if (p =='/testRequest'){
 
     } else if (p == '/method/login'){
-        console.log("ajax call to login");
-        login(req,res);
+        ajaxLogin(req,res);
         return
-        
+    } else if (p == '/method/createUser'){
+        ajaxCreateUser(req,res);
+        return
     } else {
         serveStatic.serveStatic(req,res);
         return

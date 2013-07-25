@@ -30,7 +30,7 @@ module.exports.getTemporaryToken = function (token,cb){
 }
 
 module.exports.addToUserDb = function(username,data,cb){
-	if (typeof data == 'string') data = JSON.stringify(data);
+	if (typeof data == 'object') data = JSON.stringify(data);
 	client.set(dbConventions["user"]+username,data,function(err,c){
        if (err){
        	cb(1);
@@ -74,9 +74,9 @@ module.exports.updateUserDb = function(username,data,cb){
 					cb(null);
 					return
 				}
-			}
+			});
 		}
-	})
+	});
 }
 
 module.exports.getFromUserDb = function(username,cb){
