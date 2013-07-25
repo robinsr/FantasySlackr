@@ -80,8 +80,6 @@ function handleApiCallback(req,res){
                 getS = storedData.oauth_token_secret;
             // end brevity
 
-            appMonitor.sendMessage('debug','secret going to getAccess: '+getS);
-
             oauth.getAccess(getT,getV,getS,function(err,token,secret,result){
                 if (err){
                     templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 002 - oauth connection problem");
@@ -98,14 +96,14 @@ function handleApiCallback(req,res){
                         guid: result.xoauth_yahoo_guid
                     }
 
-                    db.updateUserDb(storedData.username,newdata,function(db_err,dat){
+                    db.updateUserDb(storedData.username,newdata,function(db_err){
                         if (db_err){
                             templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 003 - db error");
 							appMonitor.sendMessage("error","err003, redis could not get users info");
                         } else {
 
     // CREATES SESSION 
-                            db.createSession(function(session_val){
+                            db.createSession(storedData.username,token,function(session_val){
     // REDIRECTS
 
                                 res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
@@ -121,8 +119,6 @@ function handleApiCallback(req,res){
 
 	// sets session keys for users and (in future) get new oauth token
 function login(req, res, data, cb) {
-    var p = /[0-9a-f]{32}/
-    var uname = "fantasyuser:" + data.uname;
 
     // GETS USER OBJECT FROM DB
 
@@ -142,7 +138,7 @@ function login(req, res, data, cb) {
 
     // SETS SESSION - needs token to set session
 
-                    db.createSession(uname,token,function(err,session_val){
+                    db.createSession(data.uname,token,function(err,session_val){
                         var return_object = {
                             sessionid : session_val
                         }
@@ -252,7 +248,7 @@ function createUser(req, res, uname, upass, uemail) {
             };
 
             // store user object
-            db.addToUserDb(uname, JSON.stringify(user_setup), function (err, rr) {
+            db.addToUserDb(user_setup, function (err) {
 
               // send success or error page
               if (err) {
@@ -285,7 +281,8 @@ function ajaxLogin(req,res){
         var userdata = JSON.parse(bodyText);
 
         if (userdata.uname && userdata.pass){
-            db.getFromUserDb(userdata.uname,function(err,r){
+            db.getPassAndToken(userdata.uname,function(err,pass,token,secret,handle){
+            //db.getFromUserDb(userdata.uname,function(err,r){
                 if (err) {
                     var dat = {
                         error: "database error"
@@ -295,26 +292,32 @@ function ajaxLogin(req,res){
                     return
                 } else {
                     if (r !== null) {
-                        var user_object = JSON.parse(r);
                         var concat_pass = userdata.pass + user_object.salt;
                         var hashed_pass = crypto.createHash('md5').update(concat_pass).digest('hex');
                         console.log(concat_pass);
-                        if (hashed_pass == user_object.pass) {
-                            db.createSession(user_object.name,"sampletoken",function(err,hash){
-                                if (err) {
-                                    var dat = {
-                                        error: "could not create session"
-                                    }
-                                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                                    res.end(JSON.stringify(dat));
-                                    return
+                        if (hashed_pass == pass) {
+                            oauth.refreshToken(token,secret,handle,function(err,token,secret,result){
+                                if (err){
+                                    console.log('err refreshing',err,token,secret,result);
                                 } else {
-                                    var dat = {
-                                        session:hash
-                                    }
-                                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                                    res.end(JSON.stringify(dat));
-                                    return
+                                    console.log(token,secret,result);
+                                    db.createSession(user_object.name,token,function(err,hash){
+                                        if (err) {
+                                            var dat = {
+                                                error: "could not create session"
+                                            }
+                                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                                            res.end(JSON.stringify(dat));
+                                            return
+                                        } else {
+                                            var dat = {
+                                                session:hash
+                                            }
+                                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                                            res.end(JSON.stringify(dat));
+                                            return
+                                        }
+                                    });
                                 }
                             });
                         } else {
