@@ -22,8 +22,8 @@ var fantasyFlackrUtils = (function() {
         publicAjaxCall: function(){
       
          var jsonObject = {
-          uname: $("#uname").val(),
-          pass: $("#pass").val()
+          uname: $("#user_name").val(),
+          pass: $("#user_pass").val()
          };
          console.log(jsonObject);
          ajaxCall(jsonObject,function(error,status,responseText){
@@ -41,6 +41,9 @@ var fantasyFlackrUtils = (function() {
           })();
 
 // event listener 
+ 
+
+
 $(document).ready(function(){
   $("#signin_form").submit(function(){
     event.preventDefault();
