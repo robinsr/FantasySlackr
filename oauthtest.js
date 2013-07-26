@@ -115,7 +115,7 @@ module.exports.refreshToken = function(oauth_token,oauth_secret,handle,cb){
   });
 }
 
-function getYahoo(url,token,secret,cb){
+module.exports.getYahoo = function(url,token,secret,cb){
   oa2.get({
     url:url,
     oauth_token: token,

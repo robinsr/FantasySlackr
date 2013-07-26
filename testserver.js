@@ -18,45 +18,6 @@ var http = require('http'),
 mu.root = __dirname + '/'
  
 
-function constructDashboard(req,res){
-	var query = qs.parse(nodeurl.parse(req.url).query);
-	db.validateSession(query.user,query.sess,function(sessionValid){
-		if (sessionValid){
-            db.getFromUserDb(query.user,function(err,result){
-                if (err || (result == null)){
-                    templates.sendErrorResponse(res,"We're having some problems.","Please try again later.","err010");
-					appMonitor.sendMessage("error","err010, db read error");
-                } else {
-                    var userData = JSON.parse(result);
-                    if (userData.oauth_access_token && userData.oauth_access_token_secret){
-                        t = userData.access_token;
-                        ts = userData.access_token_secret;
-
-                        oauth.getYahoo('http://fantasysports.yahooapis.com/fantasy/v2/league/314.l.148766',t,ts,function(err,response){
-                            if (err){
-                                templates.sendErrorResponse(res,"There was an error getting info from yahoo","Please try again later","err009");
-								appMonitor.sendMessage("error","err009, error getting info from yahoo");
-                            } else {
-                                res.writeHead(200);
-                                res.end(utils.inspect(response));
-                            }
-                        });
-                    } else {
-                    	templates.sendGenericMessage(res
-                    		,"We still need something from you"
-                    		,"You have not allowed us access to your Yahoo Fantasy Sports account."
-                    		,"<p>Click <a href='/FantasyAutomate/grantAccess?name="+query.user+"&sess="+query.sess+"'>here</a> to authorize with Yahoo</p>");
-            		return;
-                    }      
-                } 
-            });	
-		} else {
-            templates.invalidSession(req,res);
-            return;
-        }
-	})
-}
-
 	// exchanges req token and tok verifier for access token 
 function handleApiCallback(req,res){
     var yahooCb = qs.parse(nodeurl.parse(req.url).query);     
@@ -103,7 +64,7 @@ function handleApiCallback(req,res){
                         } else {
 
     // CREATES SESSION 
-                            db.createSession(storedData.username,token,function(session_val){
+                            db.createSession(storedData.username,token,function(err,session_val){
     // REDIRECTS
 
                                 res.writeHead(302, { 'Location': 'dashboard?user='+storedData.username+'&sess='+session_val });
@@ -117,273 +78,189 @@ function handleApiCallback(req,res){
     });    
 }
 
-	// sets session keys for users and (in future) get new oauth token
-function login(req, res, data, cb) {
-
-    // GETS USER OBJECT FROM DB
-
-    db.getFromUserDb(data.uname,function(err, r) {
-        if (err) {
-            console.log('error');
-			templates.sendErrorResponse(res,"There was an error logging into your account","Please try again later", "err 008");
-			appMonitor.sendMessage("error","login, redis could not get user data");
-        } else {
-
-    // CHECKS IF PASSWORD MATCHES HASH
-            if (r !== null) {
-                var user_object = JSON.parse(r);
-                var concat_pass = data.pass + user_object.salt;
-                var hashed_pass = crypto.createHash('md5').update(concat_pass).digest('hex');
-                if (hashed_pass == user_object.pass) {
-
-    // SETS SESSION - needs token to set session
-
-                    db.createSession(data.uname,token,function(err,session_val){
-                        var return_object = {
-                            sessionid : session_val
-                        }
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(return_object));
-                        return;
-                    });
-                } else {
-                    res.writeHead(400, { 'Content-Type': 'text/plain' });
-                    res.end('Invalid Username or Password');
-                    return;
-                }
-            } else {
-                res.writeHead(400, { 'Content-Type': 'text/plain' });
-                res.end('User not found');
-                return;
-            }
-        }
-    })
-}
-
-function logout(req, res) {
-	var query = qs.parse(nodeurl.parse(req.url).query);
-    db.destroySession(query.n,function(er){
+function logout(req,res,data) {
+    db.destroySession(data.uname,function(er){
         if (er){
-            template.sendErrorResponse(res,"Uh-Oh","Something went wrong","","err 013");
-            return
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+	        res.end(JSON.stringify({error:'Error Logging Out'}));
+	        return
         } else {
-            templates.logout(res);
-            return
+            res.writeHead(200);
+			res.end();
         }
     });        
 }
 
-function ajaxCreateUser(req,res){
-    var bodyText = '';
-    req.on('data',function(chunk){
-        bodyText += chunk;
-    })
-    req.on('end',function(){
-        var dat = JSON.parse(bodyText);
-        if (dat.uname && dat.upass && dat.uemail){
-            createUser(req,res,dat.uname,dat.upass,dat.uemail);
-            return
-        } else {
-            var dat = {
-                error: "missing username, password, and/or user email"
-            }
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(dat));
-            return
-        }
-    });
-}
-function formSubmitCreateUser(req,res){
-    console.log('signup form accepted');
-    var fullbody = '';
-
-    req.on('data', function(chunk){
-        fullbody += chunk
-    });
-    req.on('end',function(){
-        var formData = querystring.parse(fullbody);
-        var uname = formData.signup_uname;
-        var upass = formData.signup_pass;
-        var uemail = formData.signup_email;
-        createUser(req,res,uname,upass,uemail);
-        return;
-    });
-}
-
 	// creates user in database and begins oauth process, sends link to yahoo auth page if successful
-function createUser(req, res, uname, upass, uemail) {
-    console.log(uname,upass,uemail);
+function createUser(req, res, userdata) {
+
+	var expectedData = ["uname","upass","uemail"];
+
+	expectedData.forEach(function(piece){
+		if (typeof userdata[piece] == 'undefined'){
+			res.writeHead(400, {'Content-Type':'application/json'});
+			res.end("request parameter missing: "+piece);
+			return
+		}
+	});
+
+	var hashed_pass_and_salt = crypto.createHash('md5').update(upass + slackr_utils.requestHashAsync(32)).digest('hex');
 
     // check if user already exists
-  db.checkIfUserExists(uname, function (ex, r) {
-    if (r == 1) {
-      templates.sendErrorResponse(res,"Account already exists for "+uname,"Please try a different username")
-      return;
-    } else {
+  	db.getFromUserDb(uname, function (ex, r){
+	    if (err) {
+	        res.writeHead(500, { 'Content-Type': 'application/json' });
+	        res.end(JSON.stringify({error:'Database Error'}));
+	        return
+	    } else if (r == 1) {
+	    	res.writeHead(400, { 'Content-Type': 'application/json' });
+	        res.end(JSON.stringify({error:'Account already exists for '+uname}));
+	        return
+    	} else {
+	        oauth.getToken(function(oauth_err,oauth_token,oauth_token_secret,oauth_url){
+	          	if (oauth_err != null){
+		            res.writeHead(500, { 'Content-Type': 'application/json' });
+			        res.end(JSON.stringify({error:'Oauth Error'}));
+			        return
+	          	} else {
+	            	// store request token, token secret, and username for later lookup
+		            db.setTemporaryToken(oauth_token,oauth_token_secret,uname);
 
-      // create salt+hased password
-      slackr_utils.requestHash(function (hash_salt) {
-        var hashed_pass_and_salt = crypto.createHash('md5').update(upass + hash_salt).digest('hex');
+		            // create user object to be stored
+		            var user_setup = {
+		              name: uname,
+		              email: uemail,
+		              pass: hashed_pass_and_salt,
+		              salt: hash_salt,
+		            };
 
-        // request the request token from yahoo
-        oauth.getToken(function(oauth_err,oauth_token,oauth_token_secret,oauth_url){
-          if (oauth_err != null){
-            templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 006");
-			appMonitor.sendMessage('error','err006, getToken responsed with error');
-            return;
-          } else {
-
-            // store request token, token secret, and username for later lookup
-            db.setTemporaryToken(oauth_token,oauth_token_secret,uname);
-
-            // create user object to be stored
-            var user_setup = {
-              name: uname,
-              email: uemail,
-              pass: hashed_pass_and_salt,
-              salt: hash_salt,
-              oauth_token: oauth_token,
-              oauth_token_secret: oauth_token_secret,
-              xoauth_request_auth_url: oauth_url
-            };
-
-            // store user object
-            db.addToUserDb(user_setup, function (err) {
-
-              // send success or error page
-              if (err) {
-                templates.sendErrorResponse(res,"There was an error setting up your account","Please try again later", "err 007");
-				appMonitor.sendMessage('error','err007, redis error storing user object');
-                return;
-              } else {
-                var d = {
-                  uname: uname,
-                  url: oauth_url
-                }
-                templates.success(res,d);
-                return;
-              }
-            });
-          }
-        });
-      });
-    }
-  });
+            		// store user object
+            		db.addToUserDb(user_setup, function (err) {
+						if (err) {
+			                res.writeHead(500, { 'Content-Type': 'application/json' });
+					        res.end(JSON.stringify({error:'Database Error'}));
+					        return
+		              	} else {
+		              		res.writeHead(200, { 'Content-Type': 'application/json' });
+                			res.end(JSON.stringify({ uname: uname, url: oauth_url }));
+              			}
+            		});
+          		}
+    		});
+      	}
+	});
 }
 
 
-function ajaxLogin(req,res){
-    var bodyText = '';
-    req.on('data',function(chunk){
-        bodyText += chunk;
-    })
-    req.on('end',function(){
-        var userdata = JSON.parse(bodyText);
+function login(req,res,userdata){
 
-        if (userdata.uname && userdata.pass){
-            db.getPassAndToken(userdata.uname,function(err,pass,token,secret,handle){
-            //db.getFromUserDb(userdata.uname,function(err,r){
-                if (err) {
-                    var dat = {
-                        error: "database error"
-                    }
+	var expectedData = ["uname","upass"];
+
+	expectedData.forEach(function(piece){
+		if (typeof userdata[piece] == 'undefined'){
+			res.writeHead(400, {'Content-Type':'application/json'});
+			res.end("request parameter missing: "+piece);
+			return
+		}
+	});
+
+    db.getFromUserDb(userdata.uname,function(err,user_object){
+
+    	var token = user_object.access_token,
+            secret = user_object.access_token_secret,
+            handle = user_object.session_handle;
+
+        if (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({error:'Database Error'}));
+            return
+        } else if (user_object == null) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({error:'No User Account Found'}));
+            return
+        } else if ((userdata.pass+user_object.salt) != crypto.createHash('md5').update(concat_pass).digest('hex')) {
+        	res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({error:'Invalid Password'}));
+            return
+        } else if (token == 'undefined' || secret  'undefined' || handle == 'undefined'){
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({error:'Unauthenticated User'}));
+            return
+        } else {
+        	oauth.refreshToken(token,secret,handle,function(err,token,secret,result){
+                if (err){
                     res.writeHead(500, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify(dat));
+                    res.end(JSON.stringify({error: 'could not refresh token'}));
                     return
                 } else {
-                    if (r !== null) {
-                        var concat_pass = userdata.pass + user_object.salt;
-                        var hashed_pass = crypto.createHash('md5').update(concat_pass).digest('hex');
-                        console.log(concat_pass);
-                        if (hashed_pass == pass) {
-                            oauth.refreshToken(token,secret,handle,function(err,token,secret,result){
-                                if (err){
-                                    console.log('err refreshing',err,token,secret,result);
-                                } else {
-                                    console.log(token,secret,result);
-                                    db.createSession(user_object.name,token,function(err,hash){
-                                        if (err) {
-                                            var dat = {
-                                                error: "could not create session"
-                                            }
-                                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                                            res.end(JSON.stringify(dat));
-                                            return
-                                        } else {
-                                            var dat = {
-                                                session:hash
-                                            }
-                                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                                            res.end(JSON.stringify(dat));
-                                            return
-                                        }
-                                    });
-                                }
-                            });
+                    db.createSession(user_object.name,token,function(err,hash){
+                        if (err) {
+                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({error: 'could not create session'}));
+                            return
                         } else {
-                            console.log('really, invalid password')
-                            var dat = {
-                                error: 'Invalid Username or Password'
-                            }
-                            res.writeHead(400, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify(dat));
-                            return;
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({session:hash}));
+                            return
                         }
-                    } else {
-                        var dat = {
-                            error: "no user account found"
-                        }
-                        res.writeHead(400, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify(dat));
-                        return
-                    }
+                    });
                 }
             });
-        } else {
-            console.log('userdata bad');
-            var dat = {
-                error: 'Invalid Username or Password'
-            }
-            res.writeHead(400, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(dat));
-            return;
         }
     });
+}
+function respondOk(req,res,data){
+	var ret = {
+		success: "Method not implemented yet",
+		submitted_data: data
+	}
+	res.writeHead(200, {'Content-Type':'application/json'});
+	res.end(JSON.stringify(ret));
 }
  
  	// handles incoming http requests
 function handler(req,res){
-    req.url = req.url.replace('/FantasyAutomate', '');
-    var p = nodeurl.parse(req.url).pathname;
-    console.log(req.url,p);
- 
-	if (p == '/apicallback'){
+	slackr_utils.ajaxBodyParser(req,function(data){
+		req.url = req.url.replace('/FantasyAutomate', '');
+	    var p = nodeurl.parse(req.url).pathname;
+
+	    if (p == '/apicallback'){
         	handleApiCallback(req,res);
         	return;
-	} else if (p == '/signupForm'){
-		formSubmitCreateUser(req,res);
-		return;
-	} else if (p == '/dashboard'){
-		constructDashboard(req,res);
-		return
-	} else if (p == '/logout'){
-		logout(req,res);
-		return;
-	} else if (p == '/loggedout'){
-		logoutSuccess(req,res);
-		return;
-    } else if (p =='/testRequest'){
-
-    } else if (p == '/method/login'){
-        ajaxLogin(req,res);
-        return
-    } else if (p == '/method/createUser'){
-        ajaxCreateUser(req,res);
-        return
-    } else {
-        serveStatic.serveStatic(req,res);
-        return
-    }
+	    } else if (p == '/method/login'){
+	        login(req,res,data);
+	        return
+	    } else if (p == '/method/createNewUser'){
+	        createUser(req,res,data);
+	        return
+        } else if (p == '/method/getUserData'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/dropPlayer'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/pickupPlayer'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/modifyLineup'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/getFreeAgents'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/getPlayersOnWaivers'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/submitWaiversClaim'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else if (p == '/method/getWaiversClaim'){
+	        respondOk(req,resd,ata);
+	        return
+	    } else {
+	        res.writeHead(400);
+	        res.end({error:"invalid method"});
+	    }
+	});
 }
- 
 http.createServer(handler).listen(8133)

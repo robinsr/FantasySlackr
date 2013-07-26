@@ -6,31 +6,11 @@ var redis = require('redis'),
 	db = require("mongojs").connect(databaseUrl, collections),
 
 	dbConventions = {
-	"user":"fantasyUser:",
 	"session":"fantasySession:",
 	"token":"fantasyToken:",
 	"temp":"fantasyTempOauth:"
 };
 
-module.exports.setTemporaryToken = function (token,secret,username){
-	var set = {
-		oauth_token_secret: secret,
-		username: username
-	}
-	client.set(dbConventions["temp"]+token,JSON.stringify(set),function(err,r){});
-	client.expire(dbConventions["temp"]+token, 1800);
-}
-module.exports.getTemporaryToken = function (token,cb){
-	client.get(dbConventions["temp"]+token,function(err,c){
-		if (err) {
-			cb(1);
-			return
-		} else {
-			cb(null,c);
-			return
-		}
-	})
-}
 
 module.exports.addToUserDb = function(userdata,cb){
 	db.users.insert(userdata,function(err,saved){
@@ -57,25 +37,19 @@ module.exports.removeFromUserDb = function(username,cb){
 }
 
 module.exports.updateUserDb = function(username,data,cb){
-	db.users.update({name:username},{ $set:	{access_token: data.access_token}},function(){
-		db.users.update({name:username},{ $set: {access_token_secret: data.access_token_secret}},function(){
-			db.users.update({name:username},{ $set: {session_handle: data.session_handle}},function(){
-				db.users.update({name:username},{ $set: {guid: data.guid}},function(err){
-					if (err) {
-						cb(1);
-						return
-					} else {
-						cb(null);
-						return
-					}
-				});
-			});
-		});	
+	db.users.update({name:username},{ $set:	data},function(err){
+		if (err) {
+			cb(1);
+			return
+		} else {
+			cb(null);
+			return
+		}
 	});
 }
 
 module.exports.getFromUserDb = function(username,cb){
-	client.get(dbConventions["user"]+username,function(err,c){
+	db.users.findOne({name:username},function(err,c){
        if (err){
        	cb(1);
        	return
@@ -86,20 +60,28 @@ module.exports.getFromUserDb = function(username,cb){
 	});
 }
 
-module.exports.checkIfUserExists = function(username,cb){
-	db.users.findOne({name:username},function(err,result){
-		if (err){
-       	cb(1);
-       	return
-       } else if (result != null){
-       	cb(null,1);
-       } else {
-       	cb(null,0);
-       	return;
-       }
-	});
+	// SESSIONS AND REQUEST TOKENS ARE STORED IN REDIS
+
+module.exports.setTemporaryToken = function (token,secret,username){
+	var set = {
+		oauth_token_secret: secret,
+		username: username
+	}
+	client.set(dbConventions["temp"]+token,JSON.stringify(set),function(err,r){});
+	client.expire(dbConventions["temp"]+token, 1800);
 }
 
+module.exports.getTemporaryToken = function (token,cb){
+	client.get(dbConventions["temp"]+token,function(err,c){
+		if (err) {
+			cb(1);
+			return
+		} else {
+			cb(null,c);
+			return
+		}
+	})
+}
 
 module.exports.createSession = function(username,token,cb){
 	slackr_utils.requestHash(function(hash){
@@ -144,12 +126,12 @@ module.exports.validateSession = function (n, s, cb) {
 
         // regular session validation
     } else {
-        client.exists("session:" + n, function (ex, r) {
+        client.exists(dbConventions['session'] + n, function (ex, r) {
             if (r === 0) {
                 cb(false);
                 return;
             } else {
-                client.get("session:" + n, function (err, r) {
+                client.get(dbConventions['session'] + n, function (err, r) {
                     if (r == s) {
                         cb(true);
                         return;
