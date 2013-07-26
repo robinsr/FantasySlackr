@@ -69,22 +69,20 @@ var consumerKey,consumerSecret,oa,oa2;
 
 console.log(utils.inspect(oa));
 
-function getToken(cb){
-  appMonitor.sendMessage('debug',consumerKey);
+module.exports.getToken = function(cb){
   oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results) {
     if (error){
       appMonitor.sendMessage('error','oa module errored at getToken (line 58) '+utils.inspect(error));
       cb(1);
       return 
     } else {
-      appMonitor.sendMessage('debug','oa getToken returned '+utils.inspect(results));
       cb(null,oauth_token,oauth_token_secret,results.xoauth_request_auth_url);
       // Usually a redirect happens here to the /oauth/authorize stage
     }
   });
 }
-module.exports.getToken = getToken;
-function getAccess(oauth_token,oauth_verifier,oauth_secret,cb){
+
+module.exports.getAccess = function(oauth_token,oauth_verifier,oauth_secret,cb){
   oa.getOAuthAccessToken({
     oauth_verifier: oauth_verifier,
     oauth_token: oauth_token,
@@ -95,12 +93,27 @@ function getAccess(oauth_token,oauth_verifier,oauth_secret,cb){
       cb(1);
       return
     } else {
-      appMonitor.sendMessage('debug','oa getAccess returned '+utils.inspect(result));
       cb(null,token,secret,result);
     }
   });
 }
-module.exports.getAccess = getAccess;
+
+module.exports.refreshToken = function(oauth_token,oauth_secret,handle,cb){
+  oa.getOAuthAccessToken({
+    oauth_session_handle: handle,
+    oauth_token: oauth_token,
+    oauth_token_secret: oauth_secret
+  }, function (error, token, secret, result) {
+    if (error){
+      appMonitor.sendMessage('error','oa module errored at getToken (line 110) '+utils.inspect(error));
+      cb(1);
+      return
+    } else {
+      appMonitor.sendMessage('debug','oa refreshToken returned '+utils.inspect(result));
+      cb(null,token,secret,result);
+    }
+  });
+}
 
 function getYahoo(url,token,secret,cb){
   oa2.get({

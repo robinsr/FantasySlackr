@@ -1,21 +1,24 @@
 var redis = require('redis'),
 	client = redis.createClient(),
-	slackr_utils = require('./slackr_utils');
+	slackr_utils = require('./slackr_utils'),
+	databaseUrl = "fantasyslackr",
+	collections = ["users", "players"],
+	db = require("mongojs").connect(databaseUrl, collections),
 
-var dbConventions = {
+	dbConventions = {
 	"user":"fantasyUser:",
 	"session":"fantasySession:",
 	"token":"fantasyToken:",
 	"temp":"fantasyTempOauth:"
-}
+};
 
 module.exports.setTemporaryToken = function (token,secret,username){
 	var set = {
 		oauth_token_secret: secret,
 		username: username
 	}
-	client.set("fantasy:oauth:"+token,JSON.stringify(set),function(err,r){});
-	client.expire("fantasy:oauth:"+token, 1800);
+	client.set(dbConventions["temp"]+token,JSON.stringify(set),function(err,r){});
+	client.expire(dbConventions["temp"]+token, 1800);
 }
 module.exports.getTemporaryToken = function (token,cb){
 	client.get(dbConventions["temp"]+token,function(err,c){
@@ -29,23 +32,22 @@ module.exports.getTemporaryToken = function (token,cb){
 	})
 }
 
-module.exports.addToUserDb = function(username,data,cb){
-	if (typeof data == 'object') data = JSON.stringify(data);
-	client.set(dbConventions["user"]+username,data,function(err,c){
-       if (err){
+module.exports.addToUserDb = function(userdata,cb){
+	db.users.insert(userdata,function(err,saved){
+       if (err || !saved){
        	cb(1);
        	return
        } else {
-       	cb(null,c);
+       	cb(null);
        	return;
        }
 	});
 }
 
 module.exports.removeFromUserDb = function(username,cb){
-	client.del(dbConventions["user"]+username,function(err,c){
-       if (err){
-       	cb(1);
+	db.users.remove({name:username},function(err,deleted){
+		if (err || !deleted){
+			cb(1);
        	return
        } else {
        	cb(null,c);
@@ -55,27 +57,20 @@ module.exports.removeFromUserDb = function(username,cb){
 }
 
 module.exports.updateUserDb = function(username,data,cb){
-	client.get(dbConventions["temp"]+token,function(err,c){
-		if (err) {
-			cb(1);
-			return
-		} else {
-			var currentdata = JSON.parse(c);
-			var newdata;
-			typeof data == 'string' ? newdata = JSON.stringify(data) : newdata = data;
-			for (n in newdata){
-				currentdata[n] = newdata[n]
-			}
-			client.set(dbConventions["temp"]+token,JSON.stringify(currentdata),function(err){
-				if (err) {
-					cb(1);
-					return
-				} else {
-					cb(null);
-					return
-				}
+	db.users.update({name:username},{ $set:	{access_token: data.access_token}},function(){
+		db.users.update({name:username},{ $set: {access_token_secret: data.access_token_secret}},function(){
+			db.users.update({name:username},{ $set: {session_handle: data.session_handle}},function(){
+				db.users.update({name:username},{ $set: {guid: data.guid}},function(err){
+					if (err) {
+						cb(1);
+						return
+					} else {
+						cb(null);
+						return
+					}
+				});
 			});
-		}
+		});	
 	});
 }
 
@@ -92,11 +87,11 @@ module.exports.getFromUserDb = function(username,cb){
 }
 
 module.exports.checkIfUserExists = function(username,cb){
-	client.exists(dbConventions["user"]+username,function(err,c){
-       if (err){
+	db.users.findOne({name:username},function(err,result){
+		if (err){
        	cb(1);
        	return
-       } else if (c == 1){
+       } else if (result != null){
        	cb(null,1);
        } else {
        	cb(null,0);
@@ -104,6 +99,7 @@ module.exports.checkIfUserExists = function(username,cb){
        }
 	});
 }
+
 
 module.exports.createSession = function(username,token,cb){
 	slackr_utils.requestHash(function(hash){
