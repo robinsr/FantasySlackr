@@ -2,12 +2,12 @@ var redis = require('redis'),
 	client = redis.createClient(),
 	slackr_utils = require('./slackr_utils'),
 	databaseUrl = "fantasyslackr",
-	collections = ["users", "players"],
+	collections = ["users", "players","metadata"],
 	db = require("mongojs").connect(databaseUrl, collections),
+	utils  = require('util');
 
 	dbConventions = {
 	"session":"fantasySession:",
-	"token":"fantasyToken:",
 	"temp":"fantasyTempOauth:"
 };
 
@@ -59,6 +59,18 @@ module.exports.getFromUserDb = function(username,cb){
        }
 	});
 }
+module.exports.queryMetadata = function(username,cb){
+	var action = {called_for_user:username};
+	db.metadata.find(action,function(err){
+	if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,c);
+       	return;
+       }
+	});
+}
 
 	// SESSIONS AND REQUEST TOKENS ARE STORED IN REDIS
 
@@ -92,18 +104,8 @@ module.exports.createSession = function(username,token,secret,cb){
 		client.set(dbConventions['session']+username,hash,function(err){
 			if (err){
 				cb(1)
-				return
 			} else {
-				client.set(dbConventions['token']+username,JSON.stringify({token:token,secret:secret}),function(err){
-					if (err){
-						cb(1)
-						return
-					} else {
-						client.expire(dbConventions['token']+username,3500);
-						cb(null,hash);
-						return
-					}
-				});
+				cb(null,hash);		
 			}
 		});
 	})
@@ -111,7 +113,6 @@ module.exports.createSession = function(username,token,secret,cb){
 
 module.exports.destroySession = function(username,cb){
 	client.del(dbConventions['session']+username);
-	client.del(bConventions['token']+username);
 	cb(null);
 }
 
@@ -133,10 +134,7 @@ module.exports.validateSession = function (n, s, cb) {
             } else {
                 client.get(dbConventions['session'] + n, function (err, r) {
                     if (r == s) {
-                        client.get(dbConventions['token'] + n, function(err,tok){
-                        	var tokens = JSON.parse(tok);
-                        	cb(true,tokens.token,tokens.secret)
-                        })
+                        cb(true);
                         return;
                     } else {
                         cb(false);
@@ -148,3 +146,14 @@ module.exports.validateSession = function (n, s, cb) {
     }
 }
 
+module.exports.apiRequestCounter = function(level){
+	var d = new Date();
+	var namefield = d.getFullYear().toString() + ":" + (d.getMonth()+1).toString() + ":" + level;
+	var action = {};
+	action[namefield] = 1;
+	db.metadata.update({name:"apireqs"},{$inc: action});
+}
+
+module.exports.sampleResponses = function(obj){
+	db.metadata.insert(obj);
+}
