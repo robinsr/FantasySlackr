@@ -23,11 +23,16 @@ exports.requestHashAsync = function(length) {
 }
 
 module.exports.ajaxBodyParser = function(req,cb){
+    if (req.method == 'GET') cb({});
     var bodyText = '';
     req.on('data',function(chunk){
         bodyText += chunk;
     })
     req.on('end',function(){
-        cb(JSON.parse(bodyText));
+        if (bodyText.length > 0){
+            cb(JSON.parse(bodyText));
+        } else {
+            cb({});
+        }
     });
 }
