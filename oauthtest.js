@@ -57,6 +57,7 @@ var consumerKey,consumerSecret,oa,oa2;
                 consumerSecret: consumerSecret,
                 signatureMethod: 'HMAC-SHA1',
                 nonceLength: 16,
+                version: "1.0"
 
             })
         });
@@ -118,6 +119,9 @@ module.exports.refreshToken = function(oauth_token,oauth_secret,handle,cb){
 }
 
 module.exports.getYahoo = function(url,token,secret,cb){
+  console.log('getYahoo');
+  console.log(token);
+  console.log(secret);
   oa2.get({
     url:url,
     oauth_token: token,
@@ -125,9 +129,11 @@ module.exports.getYahoo = function(url,token,secret,cb){
   },function(error,result){
     if (error) {
       cb(1);
+      appMonitor.sendMessage('error',JSON.stringify(result));
       return
     } else {
-      cb(result);
+      appMonitor.sendMessage('success',JSON.stringify(result));
+      cb(null,result);
     }
   });
 }
