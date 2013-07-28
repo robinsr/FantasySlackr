@@ -11,7 +11,19 @@ var http = require('http'),
     //oauth = require('./oauth'),
     oauth = require('./oauthtest'),
 	appMonitor = require('./appMonitor'),
-    db = require('./dbModule');
+    db = require('./dbModule'),
+    jsonpath = require('JSONPath');
+
+    var apiUrls = {
+        users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json',
+        game: 'http://fantasysports.yahooapis.com/fantasy/v2/game/',  // add game_key
+        league: 'http://fantasysports.yahooapis.com/fantasy/v2/leagues?format=json',
+        team: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams',
+        rosterA:'http://fantasysports.yahooapis.com/fantasy/v2/team/',
+        rosterB:'/roster'
+    }
+    
+
 
 function respondInsufficient(req,res){
     res.writeHead(400, {'Content-Type': 'application/json'});
@@ -19,20 +31,65 @@ function respondInsufficient(req,res){
 }
 
 function fetchUsersLineup(req, res, userdata){
-    db.validateSession(userdata.uname,userdata.session,function(valid,token,secret){
+
+
+    // find user's leagues
+    // find user's rosters for each league
+    // find 
+
+    db.validateSession(userdata.uname,userdata.session,function(valid){
         if (valid){
-                // GET GAME KEY (nfl 2013 is 314)
-            oauth.getYahoo('http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json',token,secret,function(err,result){
+            db.getFromUserDb(userdata.uname,function(err,user_object){
                 if (err){
-                    res.writeHead(400, {"Content-Type" : "application/json"});
-                    res.end(JSON.stringify({error: "Could Not Get User\'s Game Data"}));
+                    res.writeHead(500, {"Content-Type" : "application/json"});
+                    res.end(JSON.stringify({error: "DB Could Not Find User\'s Data"}));
                 } else {
-                    var fantasy = JSON.parse(result);
-                    console.log(utils.inspect(fantasy.fantasy_content.users['0'].user[1].games['0'].game));
+                    checkUsersTokenExp(user_object,function(err,token,secret){
+                        // GET GAME KEY (nfl 2013 is 314)
+                        oauth.getYahoo(apiUrls.users,token,secret,function(err,result){
+                            if (err){
+                                res.writeHead(500, {"Content-Type" : "application/json"});
+                                res.end(JSON.stringify({error: "Could Not Get User\'s Data"}));
+                            } else {
+                                var sample = {
+                                    url:apiUrls.users,
+                                    response: JSON.parse(result)
+                                }
+                                db.sampleResponses(sample);
+                                var gameKeys = jsonpath.eval(JSON.parse(result), "$..game_key");
+                                var url = apiUrls.rosterA+"?format=json"
+                                oauth.getYahoo(url,token,secret,function(err,result){
+                                    if (err){
+                                        res.writeHead(500, {"Content-Type" : "application/json"});
+                                        res.end(JSON.stringify({error: "Could Not Get User\'s Game Data"}));
+                                    } else {
+                                        var sample = {
+                                            url:url,
+                                            called_for_user: user_object.name,
+                                            time_called: new Date(),
+                                            response: JSON.parse(result)
+                                        }
+                                        db.sampleResponses(sample);
+                                        res.writeHead(200, {"Content-Type" : "application/json"});
+                                        res.end(result);
+                                    }
+                                })
+                            }
+                        });
+                    })
                 }
             })
         } else {
             respondInsufficient(req,res);
+        }
+    })
+}
+function searchForTeamId(username){
+    db.queryMetadata(username,function(err,result){
+        if (err){
+
+        } else {
+            console.log(result);
         }
     })
 }
@@ -102,8 +159,6 @@ function createUser(req, res, userdata) {
     checkdata(req,res,["uname","upass","uemail"],userdata,function(){
         var hash_salt = slackr_utils.requestHashAsync(32);
     	var hashed_pass_and_salt = crypto.createHash('md5').update(userdata.upass + hash_salt).digest('hex');
-        console.log(hash_salt);
-        console.log(hashed_pass_and_salt);
 
         // check if user already exists
       	db.getFromUserDb(userdata.uname, function (err, r){
@@ -173,14 +228,14 @@ function checkUsersTokenExp(user_object,cb){
     handle = user_object.session_handle,
     handle_ex = user_object.session_handle_expires,
     now = new Date().getTime();
-    console.log(now);
-    console.log(token_ex);
 
     if ((typeof token_ex == 'undefined') || (now > token_ex)){
+        console.log('getting new access token. typeof is '+typeof token_ex+' , now is '+now+' , token ex is '+token_ex);
         oauth.refreshToken(token,secret,handle,function(err,newtoken,newsecret,result){
             if (err) {
                 cb(1);
             } else {
+                storeAccessResult(user_object.name,newtoken,newsecret,result);
                 cb(null,newtoken,newsecret,result);
             }
         });
@@ -233,7 +288,6 @@ function login(req,res,userdata){
                         });
                         if (result){
                             storeAccessResult(user_object.name,token,secret,result);
-                            console.log('login, got result, stored newdata');
                         }
                     }
                 });
@@ -256,7 +310,6 @@ function handler(req,res){
 		req.url = req.url.replace('/FantasyAutomate', '');
 	    var p = nodeurl.parse(req.url).pathname;
         var p1 = p.split('/')[1];
-        console.log(p1);
 
 	    if (p == '/apicallback'){
         	handleApiCallback(req,res);
