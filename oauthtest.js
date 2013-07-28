@@ -100,9 +100,11 @@ module.exports.getAccess = function(oauth_token,oauth_verifier,oauth_secret,cb){
 
 module.exports.refreshToken = function(oauth_token,oauth_secret,handle,cb){
   oa.getOAuthAccessToken({
-    oauth_session_handle: handle,
     oauth_token: oauth_token,
-    oauth_token_secret: oauth_secret
+    oauth_token_secret: oauth_secret,
+    parameters : {
+      oauth_session_handle: handle
+    }
   }, function (error, token, secret, result) {
     if (error){
       appMonitor.sendMessage('error','oa module errored at getToken (line 110) '+utils.inspect(error));
