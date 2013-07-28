@@ -13,6 +13,30 @@ var http = require('http'),
 	appMonitor = require('./appMonitor'),
     db = require('./dbModule');
 
+function respondInsufficient(req,res){
+    res.writeHead(400, {'Content-Type': 'application/json'});
+    res.end(JSON.stringify({error:"Invalid Session"}));
+}
+
+function fetchUsersLineup(req, res, userdata){
+    db.validateSession(userdata.uname,userdata.session,function(valid,token,secret){
+        if (valid){
+                // GET GAME KEY (nfl 2013 is 314)
+            oauth.getYahoo('http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json',token,secret,function(err,result){
+                if (err){
+                    res.writeHead(400, {"Content-Type" : "application/json"});
+                    res.end(JSON.stringify({error: "Could Not Get User\'s Game Data"}));
+                } else {
+                    var fantasy = JSON.parse(result);
+                    console.log(utils.inspect(fantasy.fantasy_content.users['0'].user[1].games['0'].game));
+                }
+            })
+        } else {
+            respondInsufficient(req,res);
+        }
+    })
+}
+
 	// exchanges req token and tok verifier for access token 
 function handleApiCallback(req,res){
     appMonitor.sendMessage('debud','recevied yahoo callback');
@@ -196,7 +220,7 @@ function login(req,res,userdata){
                         res.end(JSON.stringify({error: 'Could Not Refresh Token'}));
                         return
                     } else {
-                        db.createSession(user_object.name,token,function(err,hash){
+                        db.createSession(user_object.name,token,secret,function(err,hash){
                             if (err) {
                                 res.writeHead(500, { 'Content-Type': 'application/json' });
                                 res.end(JSON.stringify({error: 'could not create session'}));
@@ -247,28 +271,28 @@ function handler(req,res){
 	        createUser(req,res,data);
 	        return
         } else if (p == '/method/getUserData'){
-	        respondOk(req,resd,ata);
+	        fetchUsersLineup(req,res,data);
 	        return
 	    } else if (p == '/method/dropPlayer'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else if (p == '/method/pickupPlayer'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else if (p == '/method/modifyLineup'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else if (p == '/method/getFreeAgents'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else if (p == '/method/getPlayersOnWaivers'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else if (p == '/method/submitWaiversClaim'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else if (p == '/method/getWaiversClaim'){
-	        respondOk(req,resd,ata);
+	        respondOk(req,res,data);
 	        return
 	    } else {
 	        serveStatic.serveStatic(req,res);
