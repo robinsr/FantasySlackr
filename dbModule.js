@@ -83,7 +83,7 @@ module.exports.getTemporaryToken = function (token,cb){
 	})
 }
 
-module.exports.createSession = function(username,token,cb){
+module.exports.createSession = function(username,token,secret,cb){
 	slackr_utils.requestHash(function(hash){
 		var dat = {
 			session: hash,
@@ -94,7 +94,7 @@ module.exports.createSession = function(username,token,cb){
 				cb(1)
 				return
 			} else {
-				client.set(dbConventions['token']+username,token,function(err){
+				client.set(dbConventions['token']+username,JSON.stringify({token:token,secret:secret}),function(err){
 					if (err){
 						cb(1)
 						return
@@ -133,7 +133,10 @@ module.exports.validateSession = function (n, s, cb) {
             } else {
                 client.get(dbConventions['session'] + n, function (err, r) {
                     if (r == s) {
-                        cb(true);
+                        client.get(dbConventions['token'] + n, function(err,tok){
+                        	var tokens = JSON.parse(tok);
+                        	cb(true,tokens.token,tokens.secret)
+                        })
                         return;
                     } else {
                         cb(false);
