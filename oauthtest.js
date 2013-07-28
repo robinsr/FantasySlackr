@@ -6,12 +6,13 @@ var http = require('http'),
     crypto = require('crypto'),
     appMonitor = require('./appMonitor'),
     utils = require('util'),
-    OAuth = require('mashape-oauth').OAuth;
+    OAuth = require('mashape-oauth').OAuth,
+    db = require('./dbModule');
+
 
 	// separte server hosts oauth consumerKey and consumerSecret. only accessable locally
 var consumerKey,consumerSecret,oa,oa2;
 (function(){
-    console.log('getting keys');
     var response = '';
     var postData = '';
     var postOptions = {
@@ -24,17 +25,13 @@ var consumerKey,consumerSecret,oa,oa2;
     };
     var keyReq = http.request(postOptions,function(res){
         res.on('data',function(chunk){
-            console.log('data');
             response += chunk;
         });
         res.on('end',function(){
-            console.log('end');
             var keys = JSON.parse(response);
  
             consumerKey = keys.consumerKey;
             consumerSecret = keys.consumerSecret;
-            console.log(consumerKey);
-
 
               // oauth object for getting access
             oa  = new OAuth({
@@ -66,9 +63,6 @@ var consumerKey,consumerSecret,oa,oa2;
     keyReq.end();
 })();
 
-
-
-console.log(utils.inspect(oa));
 
 module.exports.getToken = function(cb){
   oa.getOAuthRequestToken(function (error, oauth_token, oauth_token_secret, results) {
@@ -119,9 +113,6 @@ module.exports.refreshToken = function(oauth_token,oauth_secret,handle,cb){
 }
 
 module.exports.getYahoo = function(url,token,secret,cb){
-  console.log('getYahoo');
-  console.log(token);
-  console.log(secret);
   oa2.get({
     url:url,
     oauth_token: token,
@@ -129,10 +120,12 @@ module.exports.getYahoo = function(url,token,secret,cb){
   },function(error,result){
     if (error) {
       cb(1);
-      appMonitor.sendMessage('error',JSON.stringify(result));
+      db.apiRequestCounter('error');
+      appMonitor.sendMessage('error','getYahoo errored with url '+url);
       return
     } else {
       appMonitor.sendMessage('success',JSON.stringify(result));
+      db.apiRequestCounter('success');
       cb(null,result);
     }
   });
