@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Command Tool</title>
+    <style type="text/css">
+    #keysform, #valuesform {
+        width: 420px;
+        display: inline-block;
+    }
+</style>
+</head>
+<body>
+<div id="command_modal" class="modal hide fade in">
+  <div class="modal-header">
+    <h4 id="debug_heading">Issue Command</h4>
+  </div>
+  <div class="modal-body">
+    <form>
+        <label>GET&nbsp; <input type="radio" name="GETPOST" value="GET"></label>
+        <label>POST <input type="radio" name="GETPOST" value="POST"></label>
+        <input style="width:400px;" type="text" class="" placeholder="command" name="user" id="command"/>
+        <button type="button" id="try_command">Try Command</button>
+    </form>
+
+    
+
+    <form id="keysform">
+        <legend>Keys</legend>
+    <input style="width:400px;" type="text" class="logininput"/>
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    </form>
+    <form id="valuesform">
+        <legend>Values</legend>
+    <input style="width:400px;" type="text" class="logininput"/>
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    <input style="width:400px;" type="text" class="logininput" />
+    </form>
+  </div>
+  <div>
+      <p id="statuscode"></p>
+      <p id="responsetext"></p>
+  </div>
+</div>
+
+<script type="text/javascript">
+    // dev tool for issuing server commands without the UI built up
+    var commandTool = document.getElementById('try_command').addEventListener('click', function () {
+
+        var radios = document.getElementsByName('GETPOST');
+        var method;
+
+        for (var i = 0, length = radios.length; i < length; i++) {
+            if (radios[i].checked) {
+                method = radios[i].value
+                break;
+            }
+        }
+
+        var keys = document.querySelectorAll('#keysform>input');
+        var values = document.querySelectorAll('#valuesform>input');
+
+        var json = {};
+
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].value) {
+               json[keys[i].value] = values[i].value
+            } else {
+                break
+            }
+        }
+
+        console.log(json);
+
+        var command = document.getElementById('command').value;
+        var url = "http://demos.ethernetbucket.com/FantasySlackr/"+command;
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.open(method, url, true);
+        xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+        xmlhttp.send(JSON.stringify(json));
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == 4) {
+                document.getElementById('statuscode').innerHTML = xmlhttp.status;
+                document.getElementById('responsetext').innerHTML = xmlhttp.responseText;
+            }
+        }
+    });
+</script>
+</body>
+</html>
+
+
