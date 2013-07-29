@@ -30,7 +30,14 @@ module.exports.ajaxBodyParser = function(req,cb){
     })
     req.on('end',function(){
         if (bodyText.length > 0){
-            cb(JSON.parse(bodyText));
+
+            try {
+              var parsed = JSON.parse(bodyText);
+              cb(parsed);
+            } catch(ex) {
+              cb({});
+            }
+
         } else {
             cb({});
         }

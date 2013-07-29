@@ -12,13 +12,14 @@ var http = require('http'),
     oauth = require('./oauthtest'),
 	appMonitor = require('./appMonitor'),
     db = require('./dbModule'),
-    jsonpath = require('JSONPath');
+    jsonpath = require('JSONPath'),
+    objectid = require('mongodb').ObjectID;
 
     var apiUrls = {
         users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json',
         game: 'http://fantasysports.yahooapis.com/fantasy/v2/game/',  // add game_key
         league: 'http://fantasysports.yahooapis.com/fantasy/v2/leagues?format=json',
-        team: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams',
+        team: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams?format=json',
         rosterA:'http://fantasysports.yahooapis.com/fantasy/v2/team/',
         rosterB:'/roster'
     }
@@ -30,66 +31,109 @@ function respondInsufficient(req,res){
     res.end(JSON.stringify({error:"Invalid Session"}));
 }
 
-function fetchUsersLineup(req, res, userdata){
-
-
-    // find user's leagues
-    // find user's rosters for each league
-    // find 
-
+function test(req, res, userdata){
     db.validateSession(userdata.uname,userdata.session,function(valid){
         if (valid){
-            db.getFromUserDb(userdata.uname,function(err,user_object){
-                if (err){
-                    res.writeHead(500, {"Content-Type" : "application/json"});
-                    res.end(JSON.stringify({error: "DB Could Not Find User\'s Data"}));
-                } else {
-                    checkUsersTokenExp(user_object,function(err,token,secret){
-                        // GET GAME KEY (nfl 2013 is 314)
-                        oauth.getYahoo(apiUrls.users,token,secret,function(err,result){
-                            if (err){
-                                res.writeHead(500, {"Content-Type" : "application/json"});
-                                res.end(JSON.stringify({error: "Could Not Get User\'s Data"}));
-                            } else {
-                                var sample = {
-                                    url:apiUrls.users,
-                                    response: JSON.parse(result)
-                                }
-                                db.sampleResponses(sample);
-                                var gameKeys = jsonpath.eval(JSON.parse(result), "$..game_key");
-                                var url = apiUrls.rosterA+"?format=json"
-                                oauth.getYahoo(url,token,secret,function(err,result){
-                                    if (err){
-                                        res.writeHead(500, {"Content-Type" : "application/json"});
-                                        res.end(JSON.stringify({error: "Could Not Get User\'s Game Data"}));
-                                    } else {
-                                        var sample = {
-                                            url:url,
-                                            called_for_user: user_object.name,
-                                            time_called: new Date(),
-                                            response: JSON.parse(result)
-                                        }
-                                        db.sampleResponses(sample);
-                                        res.writeHead(200, {"Content-Type" : "application/json"});
-                                        res.end(result);
-                                    }
-                                })
-                            }
-                        });
-                    })
-                }
-            })
+            getTeamKey(userdata.uname);
+            res.writeHead(200);
+            res.end();
+            //db.getFromUserDb(userdata.uname,function(err,user_object){
+                // if (err){
+                //     res.writeHead(500, {"Content-Type" : "application/json"});
+                //     res.end(JSON.stringify({error: "DB Could Not Find User\'s Data"}));
+                // } else {
+                //     checkUsersTokenExp(user_object,function(err,token,secret){
+                //         // GET GAME KEY (nfl 2013 is 314)
+                //         oauth.getYahoo(userdata.url,token,secret,function(err,result){
+                //             if (err){
+                //                 res.writeHead(500, {"Content-Type" : "application/json"});
+                //                 res.end(JSON.stringify({error: "Could Not Get User\'s Data"}));
+                //             } else {
+                //                 var sample = {
+                //                     _id: new objectid(),
+                //                     url:userdata.url,
+                //                     resource: userdata.resource,
+                //                     called_for_user: userdata.uname,
+                //                     time_called: new Date().getTime(),
+                //                     response: JSON.parse(result)
+                //                 }
+                //                 db.sampleResponses(sample);
+                //                 var dbEntry = 'db.metadata.find({_id:ObjectId("'+sample._id.toString()+'")})';
+                //                 res.writeHead(200, {"Content-Type" : "application/json"});
+                //                 res.end(dbEntry);
+                //             }
+                //         });
+                //     })
+                // }
+            //})
         } else {
             respondInsufficient(req,res);
         }
     })
 }
-function searchForTeamId(username){
-    db.queryMetadata(username,function(err,result){
+function getRoster(username){
+    db.getFromUserDb(username,function(err,user_object){
         if (err){
-
+            return
+        } else if (typeof user_object.team_keys == 'undefined'){
+            return
         } else {
-            console.log(result);
+            checkUsersTokenExp(user_object,function(err,token,secret){
+                user_object.team_keys.forEach(function(key){
+                    var url = 'http://fantasysports.yahooapis.com/fantasy/v2/team/'+key+'/roster?format=json';
+                    oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
+                        if (err){
+                            return
+                        } else {
+                            var response = JSON.parse(result);
+                            var sample = {
+                                _id: new objectid(),
+                                url:url,
+                                resource: "roster",
+                                called_for_user: username,
+                                time_called: new Date().getTime(),
+                                response: response
+                            }
+                            db.sampleResponses(sample);
+
+                            if (jsonpath.eval(response,'$..player').length > 0){
+                                db.updateTeamKeys(userdata.uname,team_keys);
+                            }
+                        }
+                    });
+                })
+            })
+        }
+    })
+}
+function getTeamKey(username){
+    db.getFromUserDb(username,function(err,user_object){
+        if (err){
+            return
+        } else {
+            checkUsersTokenExp(user_object,function(err,token,secret){
+                oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
+                    if (err){
+                        return
+                    } else {
+                        var response = JSON.parse(result);
+                        var sample = {
+                            _id: new objectid(),
+                            url:apiUrls.team,
+                            resource: "games/teams",
+                            called_for_user: userdata.uname,
+                            time_called: new Date().getTime(),
+                            response: response
+                        }
+                        //db.sampleResponses(sample);
+
+                        //if (jsonpath.eval(response,'$..team').length > 0){
+                           //db.updateTeamKeys(userdata.uname,team_keys);
+                        //}
+                        console.log(utils.inspect(jsonpath.eval(response,'$..team')));
+                    }
+                });
+            })
         }
     })
 }
@@ -306,51 +350,83 @@ function respondOk(req,res,data){
  
  	// handles incoming http requests
 function handler(req,res){
-	slackr_utils.ajaxBodyParser(req,function(data){
-		req.url = req.url.replace('/FantasyAutomate', '');
-	    var p = nodeurl.parse(req.url).pathname;
-        var p1 = p.split('/')[1];
+	
+	req.url = req.url.replace('/FantasySlackr', '');
+    req.url = req.url.replace('/fantasyslackr', '');
+    var p = nodeurl.parse(req.url).pathname;
+    var p1 = p.split('/')[1];
 
-	    if (p == '/apicallback'){
-        	handleApiCallback(req,res);
-        	return;
-	    } else if (p == '/method/login'){
-	        login(req,res,data);
-	        return
-        } else if (p == '/method/logout'){
+    if (p == '/'){
+        serveStatic.serveStatic(req,res);
+        return;
+    } else if (p == '/apicallback'){
+    	handleApiCallback(req,res);
+    	return;
+    } else if (p == '/test'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            getTeamKey(req,res,data);
+        });
+        return  
+    } else if (p == '/method/login'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            login(req,res,data);
+        });
+        return
+    } else if (p == '/method/logout'){
+        slackr_utils.ajaxBodyParser(req,function(data){
             logout(req,res,data);
-            return
-	    } else if (p == '/method/createNewUser'){
-	        createUser(req,res,data);
-	        return
-        } else if (p == '/method/getUserData'){
-	        fetchUsersLineup(req,res,data);
-	        return
-	    } else if (p == '/method/dropPlayer'){
-	        respondOk(req,res,data);
-	        return
-	    } else if (p == '/method/pickupPlayer'){
-	        respondOk(req,res,data);
-	        return
-	    } else if (p == '/method/modifyLineup'){
-	        respondOk(req,res,data);
-	        return
-	    } else if (p == '/method/getFreeAgents'){
-	        respondOk(req,res,data);
-	        return
-	    } else if (p == '/method/getPlayersOnWaivers'){
-	        respondOk(req,res,data);
-	        return
-	    } else if (p == '/method/submitWaiversClaim'){
-	        respondOk(req,res,data);
-	        return
-	    } else if (p == '/method/getWaiversClaim'){
-	        respondOk(req,res,data);
-	        return
-	    } else {
-	        serveStatic.serveStatic(req,res);
-            return
-	    }
-	});
+        });
+        return
+    } else if (p == '/method/createNewUser'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            createUser(req,res,data);
+        });
+        return
+    } else if (p == '/method/getUserData'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            fetchUsersLineup(req,res,data);
+        });
+        return
+    } else if (p == '/method/dropPlayer'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else if (p == '/method/pickupPlayer'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else if (p == '/method/modifyLineup'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else if (p == '/method/getFreeAgents'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else if (p == '/method/getPlayersOnWaivers'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else if (p == '/method/submitWaiversClaim'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else if (p == '/method/getWaiversClaim'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            respondOk(req,res,data);
+        });
+        return
+    } else {
+        res.writeHead(404, {"Content-Type":"text/plain"});
+        res.end("Method "+p+" does not exist");
+        return
+    }
 }
 http.createServer(handler).listen(8133)
+

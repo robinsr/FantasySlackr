@@ -59,6 +59,9 @@ module.exports.getFromUserDb = function(username,cb){
        }
 	});
 }
+module.exports.updateTeamKeys = function(username,keys){
+	db.users.update({name:username},{$addToSet:{'team_keys':{$each: keys}}});
+}
 module.exports.queryMetadata = function(username,cb){
 	var action = {called_for_user:username};
 	db.metadata.find(action,function(err){
