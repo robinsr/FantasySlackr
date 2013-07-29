@@ -55,6 +55,7 @@
                     var signupName = $("#signup_name").val();
                     var signupPass = $("#signup_pass").val();
                     var signupEmail = $("#signup_email").val();
+                    var mailFormat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; 
 
 
                     $(".error").hide();
@@ -79,7 +80,7 @@
                         successState = false;
                     }
 
-                    if(signupEmail == ""){
+                    if(mailFormat.test(signupEmail) == false){
                         $("#error_signup_email").show();
                         successState = false;
 
@@ -143,7 +144,7 @@
                         <div class="control-group">
                         <label class="control-label">Email</label>
                         <div class="controls"><input type="text" placeholder="Email" id="signup_email" name="signup_email"></div>
-                        <span class="error" id="error_signup_email">* blank</span><br />
+                        <span class="error" id="error_signup_email">* not a valid email</span><br />
                         </div>
                         <div class="control-group">
                         <div class="controls">
