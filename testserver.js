@@ -13,7 +13,8 @@ var http = require('http'),
 	appMonitor = require('./appMonitor'),
     db = require('./dbModule'),
     jsonpath = require('JSONPath'),
-    objectid = require('mongodb').ObjectID;
+    objectid = require('mongodb').ObjectID,
+    obj = require('./objects');
 
     var apiUrls = {
         users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json',
@@ -32,11 +33,14 @@ function respondInsufficient(req,res){
 }
 
 function test(req, res, userdata){
+    console.log('testing');
     db.validateSession(userdata.uname,userdata.session,function(valid){
         if (valid){
-            getTeamKey(userdata.uname);
-            res.writeHead(200);
-            res.end();
+            initialSetup(userdata.uname,function(da){
+                console.log(da.length);
+                res.writeHead(200);
+                res.end(JSON.stringify(da));
+            });
             //db.getFromUserDb(userdata.uname,function(err,user_object){
                 // if (err){
                 //     res.writeHead(500, {"Content-Type" : "application/json"});
@@ -54,7 +58,6 @@ function test(req, res, userdata){
                 //                     url:userdata.url,
                 //                     resource: userdata.resource,
                 //                     called_for_user: userdata.uname,
-                //                     time_called: new Date().getTime(),
                 //                     response: JSON.parse(result)
                 //                 }
                 //                 db.sampleResponses(sample);
@@ -71,42 +74,66 @@ function test(req, res, userdata){
         }
     })
 }
-function getRoster(username){
+function initialSetup(username,cb){
+    setupTeams(username,function(){
+        setupRoster(username,function(){
+            cb()
+        })
+    })
+}
+function setupRoster(username,cb){
     db.getFromUserDb(username,function(err,user_object){
         if (err){
             return
-        } else if (typeof user_object.team_keys == 'undefined'){
-            return
         } else {
             checkUsersTokenExp(user_object,function(err,token,secret){
-                user_object.team_keys.forEach(function(key){
-                    var url = 'http://fantasysports.yahooapis.com/fantasy/v2/team/'+key+'/roster?format=json';
-                    oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
-                        if (err){
-                            return
-                        } else {
-                            var response = JSON.parse(result);
-                            var sample = {
-                                _id: new objectid(),
-                                url:url,
-                                resource: "roster",
-                                called_for_user: username,
-                                time_called: new Date().getTime(),
-                                response: response
-                            }
-                            db.sampleResponses(sample);
+                user_object.teams.forEach(function(key){
+                    console.log(key)
+                    db.getTeam(key,function(err,team){
+                        var url = 'http://fantasysports.yahooapis.com/fantasy/v2/team/'+team.team_id+'/roster?format=json';
+                        oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
+                            if (err){
+                                console.log('err getting roster '+team.team_id)
+                            } else {
+                                var response = JSON.parse(result);
+                                var sample = {
+                                    _id: new objectid(),
+                                    url:url,
+                                    resource: "roster",
+                                    called_for_user: username,
+                                    response: response
+                                }
+                                db.sampleResponses(sample);
 
-                            if (jsonpath.eval(response,'$..player').length > 0){
-                                db.updateTeamKeys(userdata.uname,team_keys);
+                                if (jsonpath.eval(response,'$..team').length > 0){
+                                    for (i=0;i<jsonpath.eval(response,'$..team').length;i++){
+                                        var thisTeam = jsonpath.eval(response,'$..team')[i]
+                                        var players = jsonpath.eval(thisTeam,'$..player');
+                                        for (ii=0;ii<players.length;ii++){
+                                            var thisPlayer = new obj.player(new objectid,
+                                                players[ii].player_key,
+                                                players[ii].name.full,
+                                                players[ii].name.first,
+                                                players[ii].name.last,
+                                                players[ii].eligable_positions[0].position,
+                                                /* inj stat */'unknown',
+                                                players[ii].bye_weeks.week);
+                                            db.addPlayerToTeam(thisTeam.team_key,thisPlayer);
+                                        }
+                                        if (i >= jsonpath.eval(response,'$..team').length - 1){
+                                            cb()
+                                        }
+                                    }
+                                }
                             }
-                        }
-                    });
+                        });
+                    })
                 })
             })
         }
     })
 }
-function getTeamKey(username){
+function setupTeams(username,cb){
     db.getFromUserDb(username,function(err,user_object){
         if (err){
             return
@@ -121,16 +148,22 @@ function getTeamKey(username){
                             _id: new objectid(),
                             url:apiUrls.team,
                             resource: "games/teams",
-                            called_for_user: userdata.uname,
-                            time_called: new Date().getTime(),
+                            called_for_user: username,
                             response: response
                         }
-                        //db.sampleResponses(sample);
+                        db.sampleResponses(sample);
 
-                        //if (jsonpath.eval(response,'$..team').length > 0){
-                           //db.updateTeamKeys(userdata.uname,team_keys);
-                        //}
-                        console.log(utils.inspect(jsonpath.eval(response,'$..team')));
+                        if (jsonpath.eval(response,'$..team').length > 0){
+                            for(i=0;i<jsonpath.eval(response,'$..team').length;i++){
+                                var thisTeam = jsonpath.eval(response,'$..team')[i];
+                                var _id = new objectid();
+                                var newTeam = new obj.team(_id,user_object._id,jsonpath.eval(thisTeam,'$..team_key')[0],jsonpath.eval(thisTeam,'$..name')[0]);
+                                db.addToTeams(newTeam);
+                                if (i >= jsonpath.eval(response,'$..team').length - 1){
+                                    cb();
+                                }
+                            }
+                        }
                     }
                 });
             })
@@ -364,7 +397,7 @@ function handler(req,res){
     	return;
     } else if (p == '/test'){
         slackr_utils.ajaxBodyParser(req,function(data){
-            getTeamKey(req,res,data);
+            test(req,res,data);
         });
         return  
     } else if (p == '/method/login'){

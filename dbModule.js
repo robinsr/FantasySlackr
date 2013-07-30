@@ -2,7 +2,7 @@ var redis = require('redis'),
 	client = redis.createClient(),
 	slackr_utils = require('./slackr_utils'),
 	databaseUrl = "fantasyslackr",
-	collections = ["users", "players","metadata"],
+	collections = ["users", "players", "teams", "metadata"],
 	db = require("mongojs").connect(databaseUrl, collections),
 	utils  = require('util');
 
@@ -59,8 +59,25 @@ module.exports.getFromUserDb = function(username,cb){
        }
 	});
 }
-module.exports.updateTeamKeys = function(username,keys){
-	db.users.update({name:username},{$addToSet:{'team_keys':{$each: keys}}});
+module.exports.updateUsersTeams = function(username,team){
+	db.users.update({name:username},{$addToSet:{'teams': team}});
+}
+module.exports.addToTeams = function(team){
+	db.teams.insert(team);
+}
+module.exports.getTeam = function(id,cb){
+	db.teams.findOne({_id:id},function(err,c){
+		if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,c);
+       	return;
+       }
+   })
+}
+module.exports.addPlayerToTeam = function(team,player){
+	db.teams.findOne({team_id:team},{$set: player});
 }
 module.exports.queryMetadata = function(username,cb){
 	var action = {called_for_user:username};
