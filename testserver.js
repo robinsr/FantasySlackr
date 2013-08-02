@@ -76,7 +76,7 @@ function setupRoster(user_object,newTeam,token,secret){
             }
             db.sampleResponses(sample);
             var response = new Xmldoc.XmlDocument(result);
-            var players = response.childNamed('player')
+            var players = response.childrenNamed('player')
 
             async.each(players,function(player){
                 var newPlayer = new obj.player({
@@ -117,7 +117,7 @@ function setupTeams(user_object,token,secret,cb){
             db.sampleResponses(sample);
 
             var response = new Xmldoc.XmlDocument(result);
-            var teams = response.chiildNamed('team');
+            var teams = response.chiildrenNamed('team');
 
             async.each(teams,function(team){
                 var newTeam = new obj.team({
