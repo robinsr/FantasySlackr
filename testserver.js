@@ -1,20 +1,17 @@
-var http = require('http'),
-    https = require('https'),
-    fs = require('fs'),
-    querystring = require('querystring'),
-    crypto = require('crypto')
-    nodeurl = require('url')
-    qs = require('qs'),
-    utils = require('util'),
-    serveStatic = require('./serveStatic'),
-    slackr_utils = require('./slackr_utils'),
-    //oauth = require('./oauth'),
-    oauth = require('./oauthtest'),
-	appMonitor = require('./appMonitor'),
-    db = require('./dbModule'),
-    Xmldoc = require('xmldoc'),
-    objectid = require('mongodb').ObjectID,
-    obj = require('./objects');
+var http =          require('http'),
+    https =         require('https'),
+    crypto =        require('crypto')
+    nodeurl =       require('url')
+    qs =            require('qs'),
+    utils =         require('util'),
+    serveStatic =   require('./serveStatic'),
+    slackr_utils =  require('./slackr_utils'),
+    oauth =         require('./oauthtest'),
+	appMonitor =    require('./appMonitor'),
+    db =            require('./dbModule'),
+    objectid =      require('mongodb').ObjectID,
+    Xmldoc =        require('xmldoc'),
+    obj =           require('./objects');
 
     var apiUrls = {
         users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games',
@@ -52,10 +49,14 @@ function initialSetup(req,res,data){
         if (err){
             return console.log('error')
         } else {
-            setupTeams(obj,tok,sec,function(thisTeam){
-            //setupRoster(username,function(){
-                res.writeHead(200)
-                res.end(JSON.stringify(thisTeam));
+            setupTeams(obj,tok,sec,function(err){
+                if (err){
+                    res.writeHead(500)
+                    res.end('Error setting up teams');
+                } else {
+                    res.writeHead(500)
+                    res.end('teams set up successfully');
+                }
             })
         }
     })
@@ -100,8 +101,7 @@ function setupRoster(user_object,newTeam,token,secret){
             }
 
         }
-    })
-    
+    }) 
 }
 function setupTeams(user_object,token,secret,cb){
     oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
@@ -120,7 +120,7 @@ function setupTeams(user_object,token,secret,cb){
             var response = new Xmldoc(result);
             var teams = response.chiildNamed('team');
 
-            teams.forEach(function(team){
+            async.each(teams,function(team){
                 var newTeam = new obj.team({
                     id: new objectid(),
                     owner:user_object._id,
@@ -128,6 +128,12 @@ function setupTeams(user_object,token,secret,cb){
                     name: team.name
                 });
                 setupRoster(user_object,newTeam,token,secret);
+            },function(err){
+                if (err){
+                    cb(1);
+                } else {
+                    cb(null);
+                }
             })
         }
     });
