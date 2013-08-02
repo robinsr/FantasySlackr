@@ -98,8 +98,7 @@ function setupRoster(user_object,newTeam,token,secret){
                     db.addToTeams(newTeam);
                     console.log('team added to mongo')
                 }
-            }
-
+            })
         }
     }) 
 }
