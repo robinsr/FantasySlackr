@@ -62,11 +62,9 @@ module.exports.getFromUserDb = function(username,cb){
 module.exports.updateUsersTeams = function(username,team){
 	db.users.update({name:username},{$addToSet:{'teams': team}});
 }
-module.exports.addToTeams = function(team){
-	db.teams.insert(team);
-}
-module.exports.getTeam = function(id,cb){
-	db.teams.findOne({_id:id},function(err,c){
+
+module.exports.getUsersTeams = function(username,cb){
+	db.teams.find({owner:username},{_id:1,team_id:1},function(err,c){
 		if (err){
        	cb(1);
        	return
@@ -76,9 +74,27 @@ module.exports.getTeam = function(id,cb){
        }
    })
 }
-module.exports.addPlayerToTeam = function(team,player){
-	db.teams.findOne({team_id:team},{$set: player});
+
+module.exports.checkIfTeamExists = function(team_key,cb){
+	db.teams.findOne({team_key:team_key},function(err,result){
+		if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,result);
+       	return;
+       }
+	})
 }
+
+module.exports.addToTeams = function(team){
+	db.teams.insert(team);
+}
+
+module.exports.addPlayerToTeam = function(team,player){
+	db.teams.findOne({team_id:team},{$push: {roster:player}});
+}
+
 module.exports.queryMetadata = function(username,cb){
 	var action = {called_for_user:username};
 	db.metadata.find(action,function(err){

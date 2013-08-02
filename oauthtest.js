@@ -42,7 +42,7 @@ var consumerKey,consumerSecret,oa,oa2;
                 consumerSecret: consumerSecret,
                 signatureMethod: 'PLAINTEXT',
                 nonceLength: 16,
-                callback: "http://demos.ethernetbucket.com/FantasyAutomate/apicallback"
+                callback: "http://demos.ethernetbucket.com/FantasySlackr/apicallback"
             });
 
               // oauth for calling api (uses HMAC-SHA1)

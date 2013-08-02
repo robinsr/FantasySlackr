@@ -32,143 +32,101 @@ function respondInsufficient(req,res){
     res.end(JSON.stringify({error:"Invalid Session"}));
 }
 
-function test(req, res, userdata){
-    console.log('testing');
-    db.validateSession(userdata.uname,userdata.session,function(valid){
-        if (valid){
-            initialSetup(userdata.uname,function(da){
-                console.log(da.length);
-                res.writeHead(200);
-                res.end(JSON.stringify(da));
+function validateUser(username,cb){
+    db.getFromUserDb(username,function(err,user_object){
+        if (err){
+            cb("Invalid Request")
+        } else {
+            checkUsersTokenExp(user_object,function(err,token,secret){
+                if (err){
+                    cb("Could Not Verify Token");
+                } else {
+                    cb(null,user_object,token,secret);
+                }
             });
-            //db.getFromUserDb(userdata.uname,function(err,user_object){
-                // if (err){
-                //     res.writeHead(500, {"Content-Type" : "application/json"});
-                //     res.end(JSON.stringify({error: "DB Could Not Find User\'s Data"}));
-                // } else {
-                //     checkUsersTokenExp(user_object,function(err,token,secret){
-                //         // GET GAME KEY (nfl 2013 is 314)
-                //         oauth.getYahoo(userdata.url,token,secret,function(err,result){
-                //             if (err){
-                //                 res.writeHead(500, {"Content-Type" : "application/json"});
-                //                 res.end(JSON.stringify({error: "Could Not Get User\'s Data"}));
-                //             } else {
-                //                 var sample = {
-                //                     _id: new objectid(),
-                //                     url:userdata.url,
-                //                     resource: userdata.resource,
-                //                     called_for_user: userdata.uname,
-                //                     response: JSON.parse(result)
-                //                 }
-                //                 db.sampleResponses(sample);
-                //                 var dbEntry = 'db.metadata.find({_id:ObjectId("'+sample._id.toString()+'")})';
-                //                 res.writeHead(200, {"Content-Type" : "application/json"});
-                //                 res.end(dbEntry);
-                //             }
-                //         });
-                //     })
-                // }
-            //})
+        }
+    });
+}
+function initialSetup(req,res,data){
+    validateUser(data.uname,function(err,obj,tok,sec){
+        if (err){
+            return console.log('error')
         } else {
-            respondInsufficient(req,res);
+            setupTeams(obj,tok,sec,function(thisTeam){
+            //setupRoster(username,function(){
+                res.writeHead(200)
+                res.end(JSON.stringify(thisTeam));
+            })
         }
     })
 }
-function initialSetup(username,cb){
-    setupTeams(username,function(){
-        setupRoster(username,function(){
-            cb()
-        })
-    })
+function setupRoster(user_object,newTeam,thisTeam){
+    console.log(jsonpath.eval(thisTeam,'$..player'));
+    var players = jsonpath.eval(thisTeam,'$..player');
+    for (i=0;i<players.length;i++){
+        var thisPlayer = new obj.player(new objectid,
+            jsonpath.eval(players[i],'$..player_key')[0],
+            jsonpath.eval(players[i],'$..full')[0],
+            jsonpath.eval(players[i],'$..first')[0],
+            jsonpath.eval(players[i],'$..last')[0],
+            jsonpath.eval(players[i],'$..position')[0],
+            /* inj stat */'unknown',
+            jsonpath.eval(players[i],'$..week')[0]);
+            //db.addPlayerToTeam(thisTeam.team_key,thisPlayer);
+            console.log(thisPlayer);
+            newTeam.addPlayer(thisPlayer)
+        if (i >= players.length - 1){
+            console.log(utils.inspect(newTeam));
+        }
+    }
+    
 }
-function setupRoster(username,cb){
-    db.getFromUserDb(username,function(err,user_object){
+function setupTeams(user_object,token,secret,cb){
+    oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
         if (err){
-            return
+            console.log('oauth error');
         } else {
-            checkUsersTokenExp(user_object,function(err,token,secret){
-                user_object.teams.forEach(function(key){
-                    console.log(key)
-                    db.getTeam(key,function(err,team){
-                        var url = 'http://fantasysports.yahooapis.com/fantasy/v2/team/'+team.team_id+'/roster?format=json';
-                        oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
-                            if (err){
-                                console.log('err getting roster '+team.team_id)
-                            } else {
-                                var response = JSON.parse(result);
-                                var sample = {
-                                    _id: new objectid(),
-                                    url:url,
-                                    resource: "roster",
-                                    called_for_user: username,
-                                    response: response
-                                }
-                                db.sampleResponses(sample);
+            var response = JSON.parse(result);
+            var sample = {
+                _id: new objectid(),
+                url:apiUrls.team,
+                resource: "games/teams",
+                called_for_user: user_object.name,
+                response: response
+            }
+            db.sampleResponses(sample);
 
-                                if (jsonpath.eval(response,'$..team').length > 0){
-                                    for (i=0;i<jsonpath.eval(response,'$..team').length;i++){
-                                        var thisTeam = jsonpath.eval(response,'$..team')[i]
-                                        var players = jsonpath.eval(thisTeam,'$..player');
-                                        for (ii=0;ii<players.length;ii++){
-                                            var thisPlayer = new obj.player(new objectid,
-                                                players[ii].player_key,
-                                                players[ii].name.full,
-                                                players[ii].name.first,
-                                                players[ii].name.last,
-                                                players[ii].eligable_positions[0].position,
-                                                /* inj stat */'unknown',
-                                                players[ii].bye_weeks.week);
-                                            db.addPlayerToTeam(thisTeam.team_key,thisPlayer);
-                                        }
-                                        if (i >= jsonpath.eval(response,'$..team').length - 1){
-                                            cb()
-                                        }
-                                    }
-                                }
-                            }
-                        });
+                // IF REPONSE HAS 'TEAM' IN IT
+            if (jsonpath.eval(response,'$..team').length > 0){
+
+                    // FOR EACH TEAM (ASYNC FOR LOOP)
+                for(i=0;i<jsonpath.eval(response,'$..team').length;i++){
+
+                        // THIS TEAM IS i
+                    var thisTeam = jsonpath.eval(response,'$..team')[i];
+
+                        // CHECK IF TEAM HAS ALREADY BEEN CREATED
+                    db.checkIfTeamExists(eval(thisTeam,'$..team_key')[0],function(err,exists){
+                        if (exists != null){
+                            console.log('team exists');
+                        } else {
+                                // IF NOT CREATE TEAM OBJECT
+                            var _id = new objectid();
+                            var newTeam = new obj.team(_id,user_object._id,jsonpath.eval(thisTeam,'$..team_key')[0],jsonpath.eval(thisTeam,'$..name')[0]);
+                            
+                            //console.log(utils.inspect(thisTeam));
+
+                            setupRoster(user_object,newTeam,thisTeam);
+                            //db.addToTeams(newTeam);
+                        }
                     })
-                })
-            })
-        }
-    })
-}
-function setupTeams(username,cb){
-    db.getFromUserDb(username,function(err,user_object){
-        if (err){
-            return
-        } else {
-            checkUsersTokenExp(user_object,function(err,token,secret){
-                oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
-                    if (err){
-                        return
-                    } else {
-                        var response = JSON.parse(result);
-                        var sample = {
-                            _id: new objectid(),
-                            url:apiUrls.team,
-                            resource: "games/teams",
-                            called_for_user: username,
-                            response: response
-                        }
-                        db.sampleResponses(sample);
-
-                        if (jsonpath.eval(response,'$..team').length > 0){
-                            for(i=0;i<jsonpath.eval(response,'$..team').length;i++){
-                                var thisTeam = jsonpath.eval(response,'$..team')[i];
-                                var _id = new objectid();
-                                var newTeam = new obj.team(_id,user_object._id,jsonpath.eval(thisTeam,'$..team_key')[0],jsonpath.eval(thisTeam,'$..name')[0]);
-                                db.addToTeams(newTeam);
-                                if (i >= jsonpath.eval(response,'$..team').length - 1){
-                                    cb();
-                                }
-                            }
-                        }
+                    if (i >= jsonpath.eval(response,'$..team').length - 1){
+                        cb(thisTeam);
                     }
-                });
-            })
+                }
+            }
         }
-    })
+    });
 }
 
 	// exchanges req token and tok verifier for access token 
@@ -397,7 +355,7 @@ function handler(req,res){
     	return;
     } else if (p == '/test'){
         slackr_utils.ajaxBodyParser(req,function(data){
-            test(req,res,data);
+            initialSetup(req,res,data);
         });
         return  
     } else if (p == '/method/login'){
