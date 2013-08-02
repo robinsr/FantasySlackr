@@ -11,7 +11,8 @@ var http =          require('http'),
     db =            require('./dbModule'),
     objectid =      require('mongodb').ObjectID,
     Xmldoc =        require('xmldoc'),
-    obj =           require('./objects');
+    obj =           require('./objects'),
+    async = 	    require('async');
 
     var apiUrls = {
         users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games',
