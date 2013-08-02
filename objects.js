@@ -7,7 +7,7 @@ function team(obj){
 	this.name = obj.name;
 	this.league = obj.team_key.split('.').splice(0,3).join('.');
 	this.game = obj.team_key.split('.').splice(0,1).join('');
-	this.active = false,
+	this.active = false;
 	this.settings = {
 		probable_player: 'start',
 		questionable_player: 'start',
@@ -50,10 +50,10 @@ module.exports.player = function(obj){
 	this.player_full_name = obj.full;
 	this.player_first = obj.first;
 	this.player_last = obj.last;
-	this.position = obj.position,
-	this.injury_status = obj.injury_status,
-	this.bye_week = obj.bye_week,
-	undroppable: obj.undroppable,
+	this.position = obj.position;
+	this.injury_status = obj.injury_status;
+	this.bye_week = obj.bye_week;
+	this.undroppable = obj.undroppable;
 	this.projected_points = {};
 	this.settings = {
 		never_drop: false,
