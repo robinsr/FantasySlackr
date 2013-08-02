@@ -117,7 +117,7 @@ function setupTeams(user_object,token,secret,cb){
             db.sampleResponses(sample);
 
             var response = new Xmldoc.XmlDocument(result);
-            var teams = response.chiildrenNamed('team');
+            var teams = response.childrenNamed('team');
 
             async.each(teams,function(team){
                 var newTeam = new obj.team({
