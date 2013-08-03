@@ -16,6 +16,8 @@
   </div>
   <div class="modal-body">
     <form>
+        <label>remote <input type="radio" name="env" value="http://demos.ethernetbucket.com/FantasySlackr/"></label>
+        <label>local <input type="radio" name="env" value="../"></label>
         <label>GET&nbsp; <input type="radio" name="GETPOST" value="GET"></label>
         <label>POST <input type="radio" name="GETPOST" value="POST"></label>
         <input style="width:400px;" type="text" class="" placeholder="command" name="user" id="command"/>
@@ -71,6 +73,16 @@
             }
         }
 
+        var env_options = document.getElementsByName('env');
+        var env;
+
+        for (var i = 0, length = env_options.length; i < length; i++) {
+            if (env_options[i].checked) {
+                env = env_options[i].value
+                break;
+            }
+        }
+
         var keys = document.querySelectorAll('#keysform>input');
         var values = document.querySelectorAll('#valuesform>input');
 
@@ -86,8 +98,11 @@
 
         console.log(json);
 
+        var local = "../";
+        var remote = "demos.ethernetbucket.com/FantasySlackr/"
+
         var command = document.getElementById('command').value;
-        var url = "http://demos.ethernetbucket.com/FantasySlackr/"+command;
+        var url = env+command;
         var xmlhttp = new XMLHttpRequest();
         xmlhttp.open(method, url, true);
         xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
