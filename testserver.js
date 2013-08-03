@@ -1,26 +1,24 @@
-var http = require('http'),
-    https = require('https'),
-    fs = require('fs'),
-    querystring = require('querystring'),
-    crypto = require('crypto')
-    nodeurl = require('url')
-    qs = require('qs'),
-    utils = require('util'),
-    serveStatic = require('./serveStatic'),
-    slackr_utils = require('./slackr_utils'),
-    //oauth = require('./oauth'),
-    oauth = require('./oauthtest'),
-	appMonitor = require('./appMonitor'),
-    db = require('./dbModule'),
-    jsonpath = require('JSONPath'),
-    objectid = require('mongodb').ObjectID,
-    obj = require('./objects');
+var http =          require('http'),
+    https =         require('https'),
+    crypto =        require('crypto')
+    nodeurl =       require('url')
+    qs =            require('qs'),
+    utils =         require('util'),
+    serveStatic =   require('./serveStatic'),
+    slackr_utils =  require('./slackr_utils'),
+    oauth =         require('./oauthtest'),
+    appMonitor =    require('./appMonitor'),
+    db =            require('./dbModule'),
+    objectid =      require('mongodb').ObjectID,
+    Xmldoc =        require('xmldoc'),
+    obj =           require('./objects'),
+    async = 	    require('async');
 
     var apiUrls = {
-        users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games?format=json',
+        users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games',
         game: 'http://fantasysports.yahooapis.com/fantasy/v2/game/',  // add game_key
-        league: 'http://fantasysports.yahooapis.com/fantasy/v2/leagues?format=json',
-        team: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams?format=json',
+        league: 'http://fantasysports.yahooapis.com/fantasy/v2/leagues',
+        team: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams',
         rosterA:'http://fantasysports.yahooapis.com/fantasy/v2/team/',
         rosterB:'/roster'
     }
@@ -52,79 +50,91 @@ function initialSetup(req,res,data){
         if (err){
             return console.log('error')
         } else {
-            setupTeams(obj,tok,sec,function(thisTeam){
-            //setupRoster(username,function(){
-                res.writeHead(200)
-                res.end(JSON.stringify(thisTeam));
+            setupTeams(obj,tok,sec,function(err){
+                if (err){
+                    res.writeHead(500)
+                    res.end('Error setting up teams');
+                } else {
+                    res.writeHead(500)
+                    res.end('teams set up successfully');
+                }
             })
         }
     })
 }
-function setupRoster(user_object,newTeam,thisTeam){
-    console.log(jsonpath.eval(thisTeam,'$..player'));
-    var players = jsonpath.eval(thisTeam,'$..player');
-    for (i=0;i<players.length;i++){
-        var thisPlayer = new obj.player(new objectid,
-            jsonpath.eval(players[i],'$..player_key')[0],
-            jsonpath.eval(players[i],'$..full')[0],
-            jsonpath.eval(players[i],'$..first')[0],
-            jsonpath.eval(players[i],'$..last')[0],
-            jsonpath.eval(players[i],'$..position')[0],
-            /* inj stat */'unknown',
-            jsonpath.eval(players[i],'$..week')[0]);
-            //db.addPlayerToTeam(thisTeam.team_key,thisPlayer);
-            console.log(thisPlayer);
-            newTeam.addPlayer(thisPlayer)
-        if (i >= players.length - 1){
-            console.log(utils.inspect(newTeam));
+function setupRoster(user_object,newTeam,token,secret){
+    var url = apiUrls.rosterA+newTeam.team_key+apiUrls.rosterB
+    oauth.getYahoo(url,token,secret,function(err,result){
+        if (err) {
+            console.log('oauth error; setup roster')
+        } else {
+            var sample = {
+                _id: new objectid(),
+                url:url,
+                resource: "roster",
+                called_for_user: user_object.name,
+                response: result
+            }
+            db.sampleResponses(sample);
+            var response = new Xmldoc.XmlDocument(result);
+            var players = response.childrenNamed('player')
+
+            async.each(players,function(player){
+                var newPlayer = new obj.player({
+                    id: new objectid(),
+                    player_key: player.player_key,
+                    full: player.name.full,
+                    first: player.name.first,
+                    last: player.name.last,
+                    position: player.eligable_positions.position,
+                    injury_status: 'unknown',
+                    bye_week: player.bye_weeks.week,
+                    undroppable: player.is_undroppable
+                });
+                newTeam.addPlayer(newPlayer)
+            },function(err){
+                if (err){
+                    console.log('error occured after async loading of players into team')
+                } else {
+                    db.addToTeams(newTeam);
+                    console.log('team added to mongo')
+                }
+            })
         }
-    }
-    
+    }) 
 }
 function setupTeams(user_object,token,secret,cb){
     oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
         if (err){
-            console.log('oauth error');
+            console.log('oauth error; setup teams');
         } else {
-            var response = JSON.parse(result);
             var sample = {
                 _id: new objectid(),
                 url:apiUrls.team,
                 resource: "games/teams",
                 called_for_user: user_object.name,
-                response: response
+                response: result
             }
             db.sampleResponses(sample);
 
-                // IF REPONSE HAS 'TEAM' IN IT
-            if (jsonpath.eval(response,'$..team').length > 0){
+            var response = new Xmldoc.XmlDocument(result);
+            var teams = response.childrenNamed('team');
 
-                    // FOR EACH TEAM (ASYNC FOR LOOP)
-                for(i=0;i<jsonpath.eval(response,'$..team').length;i++){
-
-                        // THIS TEAM IS i
-                    var thisTeam = jsonpath.eval(response,'$..team')[i];
-
-                        // CHECK IF TEAM HAS ALREADY BEEN CREATED
-                    db.checkIfTeamExists(eval(thisTeam,'$..team_key')[0],function(err,exists){
-                        if (exists != null){
-                            console.log('team exists');
-                        } else {
-                                // IF NOT CREATE TEAM OBJECT
-                            var _id = new objectid();
-                            var newTeam = new obj.team(_id,user_object._id,jsonpath.eval(thisTeam,'$..team_key')[0],jsonpath.eval(thisTeam,'$..name')[0]);
-                            
-                            //console.log(utils.inspect(thisTeam));
-
-                            setupRoster(user_object,newTeam,thisTeam);
-                            //db.addToTeams(newTeam);
-                        }
-                    })
-                    if (i >= jsonpath.eval(response,'$..team').length - 1){
-                        cb(thisTeam);
-                    }
+            async.each(teams,function(team){
+                var newTeam = new obj.team({
+                    id: new objectid(),
+                    owner:user_object._id,
+                    team_key: team.team_key,
+                    name: team.name
+                });
+                setupRoster(user_object,newTeam,token,secret);
+            },function(err){
+                if (err){
+                    cb(1);
+                } else {
+                    cb(null);
                 }
-            }
+            })
         }
     });
 }

@@ -1,13 +1,13 @@
 var async = require('async');
 
-function team(id,owner,team_id,team_name){
-	_id = id
-	this.owner = owner;
-	this.team_key = team_id;
-	this.team_name = team_name;
-	this.league = team_id.split('.').splice(0,3).join('.');
-	this.game = team_id.split('.').splice(0,1).join('');
-	this.active = false,
+function team(obj){
+	_id = obj.id
+	this.owner = obj.owner;
+	this.team_key = obj.team_key;
+	this.name = obj.name;
+	this.league = obj.team_key.split('.').splice(0,3).join('.');
+	this.game = obj.team_key.split('.').splice(0,1).join('');
+	this.active = false;
 	this.settings = {
 		probable_player: 'start',
 		questionable_player: 'start',
@@ -44,15 +44,16 @@ team.prototype = {
 
 module.exports.team = team;
 
-module.exports.player = function(id,pid,full,first,last,pos,inj,bye){
-	_id = id;
-	this.yahoo_player_id = pid;
-	this.player_full_name = full;
-	this.player_first = first;
-	this.player_last = last;
-	this.position = pos,
-	this.injury_status = inj,
-	this.bye_week = bye,
+module.exports.player = function(obj){
+	_id = obj.id;
+	this.player_key = obj.player_key;
+	this.player_full_name = obj.full;
+	this.player_first = obj.first;
+	this.player_last = obj.last;
+	this.position = obj.position;
+	this.injury_status = obj.injury_status;
+	this.bye_week = obj.bye_week;
+	this.undroppable = obj.undroppable;
 	this.projected_points = {};
 	this.settings = {
 		never_drop: false,
