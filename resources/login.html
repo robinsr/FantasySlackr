@@ -109,7 +109,7 @@
 
                 
                 $(function(){
-                    $(".validatError").hide();
+                   $(".validatError").hide();
                 });
                 
                 
@@ -131,13 +131,13 @@
                     <form class="form-horizontal" id="signin_form">
                         <div class="control-group">
                         <label class="control-label">Username</label>
-                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="text" placeholder="Username" id="user_name" name="uname"><div class="validatError" id="errorUserName">* blank</div><br />
+                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="text" placeholder="Username" id="user_name" name="uname"><div class="validatError"  id="errorUserName" style="display:none;">* blank</div><br />
                         </div>
                         
                         </div>
                         <div class="control-group">
                         <label class="control-label">Password</label>
-                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="password" placeholder="Password" id="user_pass" name="pass">                        <div class="validatError" id="errorPass">* blank</div><br />
+                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="password" placeholder="Password" id="user_pass" name="pass">                        <div class="validatError" id="errorPass" style="display:none;">* blank</div><br />
 </div>
                         </div>
                     <div class="control-group">
@@ -152,17 +152,17 @@
                     <form class="form-horizontal" id="signup_form" method="POST" action="signupForm">
                         <div class="control-group">
                         <label class="control-label">Desired Username</label>
-                        <div class="controls"><input type="text" placeholder="Username" id="signup_name" name="signup_uname" ><div class="validatError" id="error_signup_name">* blank</div><br /></div>
+                        <div class="controls"><input type="text" placeholder="Username" id="signup_name" name="signup_uname" ><div class="validatError" id="error_signup_name" style="display:none;">* blank</div><br /></div>
                         
                         </div>
                         <div class="control-group">
                         <label class="control-label">Password</label>
-                        <div class="controls"><input type="password" placeholder="Password" id="signup_pass" name="signup_pass"><div class="validatError" id="error_signup_pass">* blank</div><br /></div>
+                        <div class="controls"><input type="password" placeholder="Password" id="signup_pass" name="signup_pass"><div class="validatError" id="error_signup_pass" style="display:none;">* blank</div><br /></div>
                         
                         </div>
                         <div class="control-group">
                         <label class="control-label">Email</label>
-                        <div class="controls"><input type="text" placeholder="Email" id="signup_email" name="signup_email"><div class="validatError" id="error_signup_email">* not a valid email</div><br /></div>
+                        <div class="controls"><input type="text" placeholder="Email" id="signup_email" name="signup_email"><div class="validatError" id="error_signup_email" style="display:none;">* not a valid email</div><br /></div>
                         
                         </div>
                         <div class="control-group">
