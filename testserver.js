@@ -14,17 +14,8 @@ var http =          require('http'),
     xpath =         require('xpath'), 
     dom =           require('xmldom').DOMParser,
     obj =           require('./objects'),
-    async =         require('async');
-
-    var apiUrls = {
-        users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games',
-        game: 'http://fantasysports.yahooapis.com/fantasy/v2/game/',  // add game_key
-        league: 'http://fantasysports.yahooapis.com/fantasy/v2/leagues',
-        team: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams',
-        rosterA:'http://fantasysports.yahooapis.com/fantasy/v2/team/',
-        rosterB:'/roster'
-    }
-    
+    async =         require('async'),
+    game =          require('./gameMethods');
 
 
 function respondInsufficient(req,res){
@@ -47,12 +38,13 @@ function validateUser(username,cb){
         }
     });
 }
+
 function initialSetup(username){
     validateUser(username,function(err,obj,tok,sec){
         if (err){
             db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
         } else {
-            setupTeams(obj,tok,sec,function(err){
+            game.setupTeams(obj,tok,sec,function(err){
                 if (err){
                     db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
                 } else {
@@ -62,85 +54,55 @@ function initialSetup(username){
         }
     })
 }
-function setupRoster(user_object,newTeam,token,secret,cb){
-    var url = apiUrls.rosterA+newTeam.team_key+apiUrls.rosterB
-    oauth.getYahoo(url,token,secret,function(err,result){
-        if (err) {
-            db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
-        } else {
-            var sample = {
-                _id: new objectid(),
-                url:url,
-                resource: "roster",
-                called_for_user: user_object.name,
-                response: result
+function getUserData(req,res,data){
+    checkdata(req,res,["uname","session",],data,function(){
+        db.validateSession(data.uname,data.session,function(valid){
+            if (!valid){
+                respondInsufficient(req,res)
+            } else {
+                var return_object = {};
+                db.getFromUserDb(data.uname,function(err,dbdata){
+                    if (err) {
+                        res.writeHead(500);
+                        res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
+                    } else {
+                        return_object.name = dbdata.name;
+                        return_object.email = dbdata.email,
+
+                        db.getUsersTeams(dbdata._id,function(err,teams){
+                            if (err) {
+                                res.writeHead(500);
+                                res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
+                            } else {
+                                return_object.teams = [];
+                                async.each(teams,function(a,b){
+                                    db.getTeam(a.team_key,function(err,team){
+                                        if (err){
+                                            b("error")
+                                        } else {
+                                            delete team.owner;
+                                            return_object.teams.push(team);
+                                            b(null);
+                                        }
+                                    })
+                                },function(err){
+                                    if (err){
+                                        res.writeHead(500);
+                                        res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
+                                    } else {
+                                        res.writeHead(200);
+                                        res.end(JSON.stringify(return_object));
+                                    }
+                                })
+                            }
+                        })
+                    }
+                })
             }
-            db.sampleResponses(sample);
-            var doc = new dom().parseFromString(result);
-            var players = xpath.select('//player',doc);
-
-            async.each(players,function(player,b){
-                newTeam.roster.push(new obj.player({
-                    id: new objectid(),
-                    player_key:     xpath.select('player_key/text()',player).toString(),
-                    full:           xpath.select('name/full/text()',player).toString(),
-                    first:          xpath.select('name/first/text()',player).toString(),
-                    last:           xpath.select('name/last/text()',player).toString(),
-                    position:       xpath.select('eligible_positions/position/text()',player).toString(),
-                    injury_status: 'unknown',
-                    bye_week:       xpath.select('bye_weeks/week/text()',player).toString(),
-                    undroppable:    xpath.select('is_undroppable/text()',player).toString()
-                }))
-                b(null);
-            },
-            function(err){
-                if (err){
-                    cb()
-                } else {
-                    db.addToTeams(newTeam);
-                    cb()
-                }
-            })
-        }
-    }) 
+        })
+    })
 }
-function setupTeams(user_object,token,secret,cb){
-    oauth.getYahoo(apiUrls.team,token,secret,function(err,result){
-        if (err){
-            db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
-        } else {
-            var sample = {
-                _id: new objectid(),
-                url:apiUrls.team,
-                resource: "games/teams",
-                called_for_user: user_object.name,
-                response: result
-            }
-            db.sampleResponses(sample);
 
-            var doc = new dom().parseFromString(result);
-            var teams = xpath.select('//team',doc);            
-
-            async.each(teams,function(team,c){
-               var newTeam = new obj.team({
-                    id: new objectid(),
-                    owner:user_object._id,
-                    team_key: xpath.select('team_key/text()',team).toString(),
-                    name: xpath.select('name/text()',team).toString()
-                });
-                setupRoster(user_object,newTeam,token,secret,function(){
-                    c()
-                });
-            },function(err){
-               if (err){
-                   cb(1);
-               } else {
-                   cb(null);
-               }
-            })
-        }
-    });
-}
 
     // exchanges req token and tok verifier for access token 
 function handleApiCallback(req,res){
@@ -362,6 +324,7 @@ function respondOk(req,res,data){
  
     // handles incoming http requests
 function handler(req,res){
+    //console.log(req.url);
     
     req.url = req.url.replace('/FantasySlackr', '');
     req.url = req.url.replace('/fantasyslackr', '');
@@ -396,7 +359,7 @@ function handler(req,res){
         return
     } else if (p == '/method/getUserData'){
         slackr_utils.ajaxBodyParser(req,function(data){
-            fetchUsersLineup(req,res,data);
+            getUserData(req,res,data);
         });
         return
     } else if (p == '/method/dropPlayer'){

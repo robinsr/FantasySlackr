@@ -1,4 +1,5 @@
-var crypto = require('crypto');
+var crypto = require('crypto'),
+utils =         require('util');
 
 module.exports.requestHash = function(cb) {
     crypto.randomBytes(16, function (ex, buf) {
@@ -29,17 +30,18 @@ module.exports.ajaxBodyParser = function(req,cb){
         bodyText += chunk;
     })
     req.on('end',function(){
-        if (bodyText.length > 0){
-
-            try {
-              var parsed = JSON.parse(bodyText);
-              cb(parsed);
-            } catch(ex) {
-              cb({});
-            }
-
-        } else {
-            cb({});
-        }
+      console.log('end event');
+      var parsed;
+      try {
+        console.log('try event');
+        parsed = JSON.parse(bodyText);
+      } catch(ex) {
+        console.log('catch event');
+        parsed = {}
+      } finally {
+        console.log('finally event');
+        console.log(utils.inspect(parsed));
+        cb(parsed);
+      }
     });
 }

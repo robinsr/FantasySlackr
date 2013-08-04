@@ -63,8 +63,8 @@ module.exports.updateUsersTeams = function(username,team){
 	db.users.update({name:username},{$addToSet:{'teams': team}});
 }
 
-module.exports.getUsersTeams = function(username,cb){
-	db.teams.find({owner:username},{_id:1,team_id:1},function(err,c){
+module.exports.getUsersTeams = function(user_id,cb){
+	db.teams.find({owner:user_id},{_id:1,team_key:1},function(err,c){
 		if (err){
        	cb(1);
        	return
@@ -75,7 +75,7 @@ module.exports.getUsersTeams = function(username,cb){
    })
 }
 
-module.exports.checkIfTeamExists = function(team_key,cb){
+module.exports.getTeam = function(team_key,cb){
 	db.teams.findOne({team_key:team_key},function(err,result){
 		if (err){
        	cb(1);
