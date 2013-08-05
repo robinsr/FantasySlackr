@@ -26,9 +26,6 @@ function team(obj){
 }
 
 team.prototype = {
-	addPlayer : function(player){
-		this.roster.push(player);
-	},
 	hasPlayer : function(player,cb){
 		async.detect(this.roster,function(item,callback){
 			this.roster.forEach(function(rosterMember){
@@ -60,4 +57,11 @@ module.exports.player = function(obj){
 		start_if_probable: true,
 		start_if_questionable: false
 	};
+}
+
+module.exports.league = function(obj){
+	this._id = obj.id;
+	this.league_key = obk.league_key;
+	this.name = obj.name;
+	this.url = obj.url;
 }

@@ -30,17 +30,12 @@ module.exports.ajaxBodyParser = function(req,cb){
         bodyText += chunk;
     })
     req.on('end',function(){
-      console.log('end event');
       var parsed;
       try {
-        console.log('try event');
         parsed = JSON.parse(bodyText);
       } catch(ex) {
-        console.log('catch event');
         parsed = {}
       } finally {
-        console.log('finally event');
-        console.log(utils.inspect(parsed));
         cb(parsed);
       }
     });

@@ -2,7 +2,7 @@ var redis = require('redis'),
 	client = redis.createClient(),
 	slackr_utils = require('./slackr_utils'),
 	databaseUrl = "fantasyslackr",
-	collections = ["users", "players", "teams", "metadata"],
+	collections = ["users", "players", "teams", "metadata","leagues"],
 	db = require("mongojs").connect(databaseUrl, collections),
 	utils  = require('util');
 
@@ -11,6 +11,8 @@ var redis = require('redis'),
 	"temp":"fantasyTempOauth:"
 };
 
+
+	// ============ USERS ===================
 
 module.exports.addToUserDb = function(userdata,cb){
 	db.users.insert(userdata,function(err,saved){
@@ -59,6 +61,11 @@ module.exports.getFromUserDb = function(username,cb){
        }
 	});
 }
+
+	// ========================================
+
+	// =============  TEAMS ===================
+
 module.exports.updateUsersTeams = function(username,team){
 	db.users.update({name:username},{$addToSet:{'teams': team}});
 }
@@ -94,6 +101,36 @@ module.exports.addToTeams = function(team){
 module.exports.addPlayerToTeam = function(team,player){
 	db.teams.findOne({team_id:team},{$push: {roster:player}});
 }
+
+
+	// ========================================
+
+	// ============ LEAGUES ===================
+
+module.exports.getLeague = function(league_key,cb){
+	db.leagues.findOne({league_key:league_key},function(err,result){
+		if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,result);
+       	return;
+       }
+	})
+}
+
+module.exports.addToLeagues = function(team){
+	db.leagues.insert(team);
+}
+
+
+
+
+
+
+	// ========================================
+
+	// ========== SESSIONS / MISC ==============
 
 module.exports.queryMetadata = function(username,cb){
 	var action = {called_for_user:username};

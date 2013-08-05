@@ -17,7 +17,16 @@ var http =          require('http'),
     async =         require('async'),
     game =          require('./gameMethods');
 
-
+function testLeague(req,res,userdata){
+    validateUser(userdata.uname,function(err,user_object,token,secret){
+        var league = '314.l.214501';
+        game.setupLeague(null,league,token,secret,function(err,result){
+            //console.log(result);
+            res.end();
+        })
+    })
+    
+}
 function respondInsufficient(req,res){
     res.writeHead(400, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({error:"Invalid Session"}));
@@ -339,7 +348,7 @@ function handler(req,res){
         return;
     } else if (p == '/test'){
         slackr_utils.ajaxBodyParser(req,function(data){
-            initialSetup(req,res,data);
+            testLeague(req,res,data);
         });
         return  
     } else if (p == '/method/login'){
