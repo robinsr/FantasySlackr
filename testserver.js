@@ -127,6 +127,7 @@ function handleApiCallback(req,res){
     db.getTemporaryToken(yahooCb.oauth_token,function(err,result){
         if (err){
             appMonitor.sendMessage("error","err001, failed to find token in database");
+            db.updateUserDb(storedData.username,{initial_setup:"error"},function(){})
             return
         } else {
             var storedData = JSON.parse(result);
@@ -134,15 +135,25 @@ function handleApiCallback(req,res){
             oauth.getAccess(yahooCb.oauth_token,yahooCb.oauth_verifier,storedData.oauth_token_secret,function(err,token,secret,result){
                 if (err){
                     appMonitor.sendMessage("error","err002, oauth connection problem");
+                    db.updateUserDb(storedData.username,{initial_setup:"error"},function(){})
                 } else {
-                    // STORES OAUTH ACCESS TOKEN
-                    storeAccessResult(storedData.username,token,secret,result);
-                    // AT THIS POINT, PINGING login WOULD RETURN A SESSION, NOT "Unauthorized User"
+                    //  CHECK IF USER WITH GUID EXISTS
+                    db.checkGuid(result.xoauth_yahoo_guid,function(err,guid_result){
+                        if (err){
+                            db.updateUserDb(storedData.username,{initial_setup:"error"},function(){})
+                        } else if (guid_result != null){
+                            db.updateUserDb(storedData.username,{initial_setup:"guid taken"},function(){})
+                        } else {
+                            // STORES OAUTH ACCESS TOKEN
+                            storeAccessResult(storedData.username,token,secret,result);
+                            // AT THIS POINT, PINGING login WOULD RETURN A SESSION, NOT "Unauthorized User"
 
-                    // INTIAL SETUP OF TEAMS AND ROSTERS
-                    db.updateUserDb(storedData.username,{initial_setup:"pending"},function(){
-                        initialSetup(storedData.username);
-                    });
+                            // INTIAL SETUP OF TEAMS AND ROSTERS
+                            db.updateUserDb(storedData.username,{initial_setup:"pending"},function(){
+                                initialSetup(storedData.username);
+                            });
+                        }
+                    })        
                 }
             });                         
         }
@@ -290,12 +301,23 @@ function login(req,res,userdata){
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'Invalid Password'}));
                 return
+            } else if (typeof user_object.initial_setup == 'undefined'){
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:'Error Creating Account'}));
+                return
+            } else if (user_object.initial_setup == 'guid taken'){
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:'Yahoo ID already in use'}));
+                return
+            } else if (user_object.initial_setup == 'error'){
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.strin5ify({error:'Error Fetching Users Yahoo data'}));
+                return
             } else if (typeof user_object.access_token == 'undefined'){
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'Unauthenticated User'}));
                 return
             } else {
-
                 checkUsersTokenExp(user_object,function(err,token,secret,result){
                     if (err){
                         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -333,7 +355,7 @@ function respondOk(req,res,data){
  
     // handles incoming http requests
 function handler(req,res){
-    //console.log(req.url);
+    console.log(req.url);
     
     req.url = req.url.replace('/FantasySlackr', '');
     req.url = req.url.replace('/fantasyslackr', '');

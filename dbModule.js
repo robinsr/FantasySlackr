@@ -61,6 +61,17 @@ module.exports.getFromUserDb = function(username,cb){
        }
 	});
 }
+module.exports.checkGuid = function(guid,cb){
+	db.users.findOne({guid:guid},function(err,c){
+       if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,c);
+       	return;
+       }
+	});
+}
 
 	// ========================================
 

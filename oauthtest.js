@@ -78,19 +78,22 @@ module.exports.getToken = function(cb){
 }
 
 module.exports.getAccess = function(oauth_token,oauth_verifier,oauth_secret,cb){
-  oa.getOAuthAccessToken({
-    oauth_verifier: oauth_verifier,
-    oauth_token: oauth_token,
-    oauth_token_secret: oauth_secret
-  }, function (error, token, secret, result) {
-    if (error){
-      appMonitor.sendMessage('error','oa module errored at getToken (line 80) '+utils.inspect(error));
-      cb(1);
-      return
-    } else {
-      cb(null,token,secret,result);
-    }
-  });
+    // SETTIMEOUT, ESSENTIALLY TO WAIT FOR YAHOO TO CATCH UP
+  setTimeout(function(){
+      oa.getOAuthAccessToken({
+      oauth_verifier: oauth_verifier,
+      oauth_token: oauth_token,
+      oauth_token_secret: oauth_secret
+    }, function (error, token, secret, result) {
+      if (error){
+        appMonitor.sendMessage('error','oa module errored at getToken (line 80) '+utils.inspect(error));
+        cb(1);
+        return
+      } else {
+        cb(null,token,secret,result);
+      }
+    });
+  },500);
 }
 
 module.exports.refreshToken = function(oauth_token,oauth_secret,handle,cb){
