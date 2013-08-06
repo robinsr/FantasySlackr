@@ -1,9 +1,7 @@
+var ffl = (function() {
+      function ajaxCall(url ,postData, cb){
 
-
-var fantasyFlackrUtils = (function() {
-      function ajaxCall(postData, cb){
-
-        $.ajax("method/login", {
+        $.ajax(url, {
           data : JSON.stringify(postData),
           contentType : 'application/json',
           type : 'POST',
@@ -19,14 +17,13 @@ var fantasyFlackrUtils = (function() {
       }
 
       return{
-        publicAjaxCall: function(){
-      
+        sendLogin: function(){
          var jsonObject = {
           uname: $("#user_name").val(),
-          pass: $("#user_pass").val()
+          upass: $("#user_pass").val()
          };
          console.log(jsonObject);
-         ajaxCall(jsonObject,function(error,status,responseText){
+         ajaxCall("method/login",jsonObject,function(error,status,responseText){
           if(error != null){
             alert("Error");
           }
@@ -35,6 +32,16 @@ var fantasyFlackrUtils = (function() {
         }
 
          });
+        },
+        sendSignup: function(){
+          var jsonObject = {
+          uname: $("#signup_name").val(),
+          upass: $("#signup_pass").val(),
+          uemail: $("#signup_email").val()
+         };
+         ajaxCall("method/createNewUser",jsonObject,function(err,status,responseText){
+
+         })
         }
       }
             
@@ -42,11 +49,3 @@ var fantasyFlackrUtils = (function() {
 
 // event listener 
  
-
-
-$(document).ready(function(){
-  $("#signin_form").submit(function(){
-    event.preventDefault();
-    fantasyFlackrUtils.publicAjaxCall()
-  })
-})

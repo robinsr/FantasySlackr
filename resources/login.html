@@ -7,9 +7,9 @@
             <script type="text/javascript" src="jquery-1.8.3.min.js"></script>
 
 		    <!-- Le styles -->
-		    <link href="../bootstrap/bootstrap.min.css" rel="stylesheet">
-            <link href="../bootstrap/bootstrap-responsive.min.css" rel="stylesheet">
-            <script  src="resources/strings.js"> </script> 
+		    <link href="bootstrap/bootstrap.min.css" rel="stylesheet">
+            <link href="bootstrap/bootstrap-responsive.min.css" rel="stylesheet">
+            <script src="strings.js"> </script> 
             <style type="text/css">
                 
               
@@ -142,14 +142,14 @@
                         </div>
                     <div class="control-group">
                         <div class="controls">
-                            <button type="submit" class="btn btn-primary" id="loginSubmit" >Login</button>
+                            <button type="button" class="btn btn-primary" id="loginSubmit" >Login</button>
                         </div>
                     </div>
                     </form>
                 </div>
                 <div class="span6">
                     <p class="lead">...or sign up!</p>
-                    <form class="form-horizontal" id="signup_form" method="POST" action="signupForm">
+                    <form class="form-horizontal" id="signup_form">
                         <div class="control-group">
                         <label class="control-label">Desired Username</label>
                         <div class="controls"><input type="text" placeholder="Username" id="signup_name" name="signup_uname" ><div class="validatError" id="error_signup_name" style="display:none;">* blank</div><br /></div>
@@ -167,7 +167,7 @@
                         </div>
                         <div class="control-group">
                         <div class="controls">
-                            <button type="submit" class="btn btn-primary" id="signupSubmit">Sign Up!</button>
+                            <button type="button" class="btn btn-primary" id="signupSubmit">Sign Up!</button>
                         </div>
 
                         </div>
@@ -184,9 +184,17 @@
             </div>   
                 <script type="text/javascript">
                 //on page load
-                $('#loginSubmit').click(function(){return validateLogin()
+                $('#loginSubmit').click(function(){
+                    var valid = validateLogin();
+                    if (valid == true){
+                        ffl.sendLogin();
+                    }
                 });
-                $('#signupSubmit').click(function(){return validateSignup()
+                $('#signupSubmit').click(function(){
+                    var valid = validateSignup();
+                    if (valid == true){
+                        ffl.sendSignup();
+                    }
                 });
             </script>
 		</body>
