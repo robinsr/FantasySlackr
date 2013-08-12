@@ -15,7 +15,8 @@ var http =          require('http'),
     dom =           require('xmldom').DOMParser,
     obj =           require('./objects'),
     async =         require('async'),
-    game =          require('./gameMethods');
+    game =          require('./gameMethods'),
+    app =           http.createServer(handler);
 
 function testLeague(req,res,userdata){
     validateUser(userdata.uname,function(err,user_object,token,secret){
@@ -434,5 +435,12 @@ function handler(req,res){
         return
     }
 }
-http.createServer(handler).listen(8133)
+
+if (process.argv[2] == '-d'){
+    app.listen(8125)
+    console.log('Dev - listening on 8125')
+} else {
+    app.listen(8133);
+    console.log('Prod - listening on 8133')
+}
 
