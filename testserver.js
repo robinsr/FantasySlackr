@@ -358,6 +358,7 @@ function respondOk(req,res,data){
 function handler(req,res){
     console.log(req.url);
     
+    req.url = req.url.replace('/dev','');
     req.url = req.url.replace('/FantasySlackr', '');
     req.url = req.url.replace('/fantasyslackr', '');
     var p = nodeurl.parse(req.url).pathname;
