@@ -1,201 +1,108 @@
-<!doctype html>
-	<html lang="en">
-		<head>
-			<meta charset="utf-8" />
-			<title>Fantasy Automate &middot; Demos &middot; Ethernet Bucket</title>
-		  
-            <script type="text/javascript" src="jquery-1.8.3.min.js"></script>
 
-		    <!-- Le styles -->
-		    <link href="bootstrap/bootstrap.min.css" rel="stylesheet">
-            <link href="bootstrap/bootstrap-responsive.min.css" rel="stylesheet">
-            <script src="strings.js"> </script> 
-            <style type="text/css">
-                
-              
-                
-                .validatError {
-                    color:red;
-                }
-            </style>
-			<!--[if IE]>
-			<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-			<![endif]-->
-            <script type="text/javascript">
-                
-                console.log("hello!");
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="../../assets/ico/favicon.png">
 
+    <title>Fantasy Automate &middot; Demos &middot; Ethernet Bucket</title>
+    
+    <link href="resources/bootstrap/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="resources/style.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="../../assets/js/html5shiv.js"></script>
+      <script src="../../assets/js/respond.min.js"></script>
+      <![endif]-->
+  </head>
 
-                function validateLogin()
-                {
+  <body>
 
-                    //Gather for data
-                    var userName = $("#user_name").val();
-                    var userPass = $("#user_pass").val();
+  <!-- ==============  NAV   =============  -->
 
-                    // clear error will go here
-                    $(".validatError").hide();
-                    $("#user_name").closest(".control-group").removeClass("error");
-                    $("#user_pass").closest(".control-group").removeClass("error");
-
-                    // if successState is fale then will keep checking errors
-
-                    var successState = true;
-
-                    if(userName == "")
-                    {
-
-                        $("#user_name").closest(".control-group").addClass("error");
-                        $("#errorUserName").show();
-                        successState = false;
-
-                    }
-                    if(userPass == "")
-                    {
-                        $("#user_pass").closest(".control-group").addClass("error");
-                        $("#errorPass").show();
-                        successState = false;
-
-                    }
-
-                        return successState;
-
-                }
-
-                function validateSignup()
-                {
-                    var signupName = $("#signup_name").val();
-                    var signupPass = $("#signup_pass").val();
-                    var signupEmail = $("#signup_email").val();
-                    var mailFormat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/; 
-
-                    // Remove errors
-                    $(".validatError").hide();
-                    $("#signup_name").closest(".control-group").removeClass("error");
-                    $("#signup_pass").closest(".control-group").removeClass("error");
-                    $("#signup_email").closest(".control-group").removeClass("error");
-
-
-                    var successState = true;
-
-
-
-                    if(signupName == "")
-                    {
-                        $("#signup_name").closest(".control-group").addClass("error");
-                        $("#error_signup_name").show();
-                        successState = false;
-                    }
-
-
-
-
-                    if(signupPass == "")
-                    {
-                        $("#signup_pass").closest(".control-group").addClass("error");
-                        $("#error_signup_pass").show();
-                        successState = false;
-                    }
-
-                    if(mailFormat.test(signupEmail) == false){
-                        $("#signup_email").closest(".control-group").addClass("error");
-                        $("#error_signup_email").show();
-                        successState = false;
-
-                    }
-                        return successState;
-
-                }
-
-                
-                $(function(){
-                   $(".validatError").hide();
-                });
-                
-                
-
-
-
-            </script>
-		</head>
-		<body>
-			<div class="container">
- 			<div class="hero-unit">
-                <h1>Fantasy Automate</h1>
-                <p>Because 10 minutes a week setting your lineup is too much</p>
-
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
             </div>
-            <div class="center_items span12 login_div">
-                <div class="span6">
-                    <p class="lead">Log in...</p>
-                    <form class="form-horizontal" id="signin_form">
-                        <div class="control-group">
-                        <label class="control-label">Username</label>
-                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="text" placeholder="Username" id="user_name" name="uname"><div class="validatError"  id="errorUserName" style="display:none;">* blank</div><br />
-                        </div>
-                        
-                        </div>
-                        <div class="control-group">
-                        <label class="control-label">Password</label>
-                        <div class="controls"><input autocorrect="off" autocomplete="off" autocapitalize="off" type="password" placeholder="Password" id="user_pass" name="pass">                        <div class="validatError" id="errorPass" style="display:none;">* blank</div><br />
-</div>
-                        </div>
-                    <div class="control-group">
-                        <div class="controls">
-                            <button type="button" class="btn btn-primary" id="loginSubmit" >Login</button>
-                        </div>
-                    </div>
-                    </form>
-                </div>
-                <div class="span6">
-                    <p class="lead">...or sign up!</p>
-                    <form class="form-horizontal" id="signup_form">
-                        <div class="control-group">
-                        <label class="control-label">Desired Username</label>
-                        <div class="controls"><input type="text" placeholder="Username" id="signup_name" name="signup_uname" ><div class="validatError" id="error_signup_name" style="display:none;">* blank</div><br /></div>
-                        
-                        </div>
-                        <div class="control-group">
-                        <label class="control-label">Password</label>
-                        <div class="controls"><input type="password" placeholder="Password" id="signup_pass" name="signup_pass"><div class="validatError" id="error_signup_pass" style="display:none;">* blank</div><br /></div>
-                        
-                        </div>
-                        <div class="control-group">
-                        <label class="control-label">Email</label>
-                        <div class="controls"><input type="text" placeholder="Email" id="signup_email" name="signup_email"><div class="validatError" id="error_signup_email" style="display:none;">* not a valid email</div><br /></div>
-                        
-                        </div>
-                        <div class="control-group">
-                        <div class="controls">
-                            <button type="button" class="btn btn-primary" id="signupSubmit">Sign Up!</button>
-                        </div>
+            <div class="collapse navbar-collapse">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="#">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div><!--/.nav-collapse -->
+        </div>
+    </div>
 
-                        </div>
-                        <span>
-                        <div class="control-group">
-                            <div class="controls">
-                                <p class="text-error" data-bind="text: signuperror()"></p>
-                            </div>
-                        </div>
-                        </span>
-                    </form>
-                </div>
-            </div> 
-            </div>   
-                <script type="text/javascript">
-                //on page load
-                $('#loginSubmit').click(function(){
-                    var valid = validateLogin();
-                    if (valid == true){
-                        ffl.sendLogin();
-                    }
-                });
-                $('#signupSubmit').click(function(){
-                    var valid = validateSignup();
-                    if (valid == true){
-                        ffl.sendSignup();
-                    }
-                });
-            </script>
-		</body>
-	</html>
+    <!-- ==============  END NAV   =============  -->
+
+    <!-- ==============  LOGIN PAGE   =============  -->
+
+    <div class="container" data-bind="visible: displayPage() == 'login'">
+        <div class="col-lg-6">
+            <div class="welcome-message">
+               <h2 class="form-signin-heading">FantasySlackr</h2>
+               <p>Because 10 minutes a week setting your lineup is just too much...</p>
+               <p><button class="btn btn-default" data-bind="click:showSignup">Sign Up »</a></p>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <form class="form-signin">
+                <h2 class="form-signin-heading">Please sign in</h2>
+                <input type="text" class="form-control" placeholder="Email address" autofocus>
+                <input type="password" class="form-control" placeholder="Password">
+                <label class="checkbox">
+                <input type="checkbox" value="remember-me"> Remember me
+                </label>
+                <button class="btn btn-lg btn-primary btn-block" type="button" data-bind="click:login">Sign in</button>
+            </form>
+        </div>
+    </div> 
+
+    <!-- ==============  END SIGNUP PAGE   =============  -->
+
+    <!-- ==============  DASHBOARD  =============  -->
+
+    <div style="display: none;" class="container" data-bind="visible: displayPage() == 'dashboard'">
+        
+        <h2>DASHBOARD!!</h2>
+    </div>
+
+    <!-- ==============  END DASHBOARD  =============  -->
+
+    <!-- ==============  MODALS  ================= -->
+
+<div class="modal fade in" data-bind="modalVis:modalStatus" data-showon="signup" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Create Account</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-signin">
+                <input type="text" class="form-control" placeholder="Email address" autofocus>
+                <input type="password" class="form-control" placeholder="Password">
+                <button class="btn btn-lg btn-primary btn-block" type="button" data-bind="click:signup">Create Account</button>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="resources/jquery-1.8.3.min.js"></script>
+<script src="resources/bootstrap/bootstrap.min.js"></script>
+<script src="resources/bootstrap/modal.js"></script>
+<script src="resources/knockout_full.js"></script>
+<script src="resources/binding.js"></script>
+<script src="resources/viewmodel.js"></script>
+</body>
+</html>

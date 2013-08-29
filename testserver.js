@@ -431,9 +431,8 @@ function handler(req,res){
         });
         return
     } else {
-        res.writeHead(404, {"Content-Type":"text/plain"});
-        res.end("Method "+p+" does not exist");
-        return
+        serveStatic.serveStatic(req,res);
+        return;
     }
 }
 

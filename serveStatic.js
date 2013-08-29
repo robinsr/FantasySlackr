@@ -21,7 +21,7 @@ var mimeType = {
 var serveStatic = function(req, res) {
     var filePath = '.' + req.url;
     if (filePath == './') {
-        filePath = './resources/login.html';
+        filePath = './index.html';
     }
     fs.exists(filePath, function (exists) {
         if (exists) {
