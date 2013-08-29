@@ -365,7 +365,7 @@ function handler(req,res){
     if (p == '/'){
         serveStatic.serveStatic(req,res);
         return;
-    } else if (p == '/apicallback'){
+    } else if (p == '/apicallback' || p == '/apicallback/'){
         handleApiCallback(req,res);
         return;
     } else if (p == '/test'){
