@@ -61,7 +61,7 @@ module.exports.player = function(obj){
 
 module.exports.league = function(obj){
 	this._id = obj.id;
-	this.league_key = obk.league_key;
+	this.league_key = obj.league_key;
 	this.name = obj.name;
 	this.url = obj.url;
 }
