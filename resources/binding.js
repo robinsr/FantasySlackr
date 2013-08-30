@@ -58,10 +58,22 @@ ko.bindingHandlers.ajaxIcons = {
     },
     update: function(element, valueAccessor) {
         var value = valueAccessor();
-        console.log(value());
         $(element).removeClass('loading').removeClass('verified').removeClass('rejected');
         if (value() != '') {
             $(element).addClass(value());
         }
     }
 };
+ko.bindingHandlers.changeSetting = {
+    init: function(element, valueAccessor){
+        $(element).change(function(){
+            console.log(this.value)
+            fantasyslackr.viewmodel.selectedTeam().settings.lack_of_players(this.value);
+        })
+    },
+    update: function(element, valueAccessor){
+        var value = valueAccessor()
+        var set = value.selectedTeam().settings.lack_of_players();
+        $(element).val(set);
+    }
+}

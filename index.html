@@ -8,7 +8,7 @@
     <meta name="author" content="">
     <link rel="shortcut icon" href="../../assets/ico/favicon.png">
 
-    <title>Fantasy Automate &middot; Demos &middot; Ethernet Bucket</title>
+    <title>FantasySlackr &middot; Demos &middot; Ethernet Bucket</title>
     
     <link href="resources/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="resources/style.css">
@@ -76,17 +76,94 @@
     <div style="display: none;" class="container dashboard" data-bind="visible: displayPage() == 'dashboard'">
         
         <div class="col-lg-6 dashboard-panel">
-            <div>       
-                <h2>Heading</h2>
-                <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-                <p><a class="btn btn-primary" href="#">View details »</a></p>
+            <div> 
+            <select data-bind="options: teams, optionsText: 'name', value: selectedTeam"></select>
+                <table data-bind="if: selectedPlayers().length > 0">
+                    <thead>
+                    <tr>
+                        <th>Sel</th>
+                        <th>Name</th>
+                        <th>Pos</th>
+                        <th>Inj</th>
+                        <th>Bye</th>
+                    </tr>
+                    </thead>
+                    <tbody data-bind="foreach: selectedPlayers">
+                        <tr>
+                            <td><input type="checkbox"></input></td>
+                            <td data-bind="text: player_full_name"></td>
+                            <td data-bind="text: position"></td>
+                            <td data-bind="text: injury_status"></td>
+                            <td data-bind="text: bye_week"></td>
+                            <td><button type="button" class="btn btn-default btn-xs">Move</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div data-bind="if: selectedPlayers().length == 0">
+                    <p>Roster Empty</p>
+                </div>
             </div>
         </div>
         <div class="col-lg-3 dashboard-panel">
             <div>       
-                <h2>Heading</h2>
-                <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-                <p><a class="btn btn-primary" href="#">View details »</a></p>
+                <div class="panel-group" id="accordion">
+                  <div class="panel panel-default">
+                    <div class="panel-heading">
+                      <h4 class="panel-title">
+                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+                          Team Settings
+                        </a>
+                      </h4>
+                    </div>
+                    <div id="collapseOne" class="panel-collapse collapse">
+                      <div class="panel-body">
+                        <div class="control-group">
+                            <label class="control-label">Ask before dropping/replacing</label>
+                            <div class="controls">
+                              <label class="checkbox inline">
+                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_qb"> QB
+                              </label>
+                              <label class="checkbox inline">
+                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_rb"> RB
+                              </label>
+                              <label class="checkbox inline">
+                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_wr"> WR
+                              </label>
+                              <label class="checkbox inline">
+                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_te"> TE
+                              </label>
+                              <label class="checkbox inline">
+                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_def"> DEF
+                              </label>
+                              <label class="checkbox inline">
+                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_k"> K
+                              </label>
+                            </div>
+                          </div>
+                          <select data-bind="changeSetting:$data">
+                            <option value="replace_bye">Replace player on bye</option>                        
+                            <option value="replace_injured">Replace injured player</option>
+                            <option value="ask">Ask me</option>
+                            <option value="do_nothing">Do Nothing</option>
+                          </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="panel panel-default">
+                    <div class="panel-heading">
+                      <h4 class="panel-title">
+                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">
+                          Player Settings
+                        </a>
+                      </h4>
+                    </div>
+                    <div id="collapseTwo" class="panel-collapse collapse">
+                      <div class="panel-body">
+                        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. 
+                      </div>
+                    </div>
+                  </div>
+                </div>
             </div>
         </div>
         <div class="col-lg-3 dashboard-panel">
@@ -129,6 +206,8 @@
 
 <script src="resources/jquery-1.8.3.min.js"></script>
 <script src="resources/bootstrap/bootstrap.min.js"></script>
+<script src="resources/bootstrap/transition.js"></script>
+<script src="resources/bootstrap/collapse.js"></script>
 <script src="resources/bootstrap/modal.js"></script>
 <script src="resources/knockout_full.js"></script>
 <script src="resources/binding.js"></script>
