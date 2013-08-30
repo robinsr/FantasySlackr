@@ -23,7 +23,7 @@
 
   <!-- ==============  NAV   =============  -->
 
-    <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar navbar-inverse navbar-fixed-top" data-bind="visible: displayPage() != 'login'">
         <div class="container">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
@@ -31,14 +31,15 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
+                <a class="navbar-brand" href="#">FantasySlackr</a>
             </div>
             <div class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li class="active"><a href="#">Home</a></li>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#contact">Contact</a></li>
+                    <li class="active"><a href="#">Lineup</a></li>
+                    <li><a href="#about">Settings</a></li>
+                    <li><a href="#contact">Activity</a></li>
                 </ul>
-            </div><!--/.nav-collapse -->
+            </div>
         </div>
     </div>
 
@@ -48,32 +49,53 @@
 
     <div class="container" data-bind="visible: displayPage() == 'login'">
         <div class="col-lg-6">
-            <div class="welcome-message">
-               <h2 class="form-signin-heading">FantasySlackr</h2>
-               <p>Because 10 minutes a week setting your lineup is just too much...</p>
-               <p><button class="btn btn-default" data-bind="click:showSignup">Sign Up &raquo;</button></p>
-            </div>
-        </div>
-        <div class="col-lg-6">
+        <h1 class="form-signin jumbo">FantasySlackr</h1>
             <form class="form-signin" data-bind="submit:login">
-                <h2 class="form-signin-heading">Login</h2>
-                <input type="text" class="form-control" data-bind="value: loginName" placeholder="Username" autofocus>
-                <input type="password" class="form-control" data-bind="value: loginPass" placeholder="Password">
-                <label class="checkbox">
+                <div data-bind="formShake:shake" data-shakeon="login">
+                <h2 class="form-signin-heading shadow">Login</h2>
+                <input type="text" class="form-control top-input" data-bind="value: loginName" placeholder="Username" autofocus>
+                <input type="password" class="form-control bottom-input" data-bind="value: loginPass" placeholder="Password">
+                <!-- ko if: loginFeedback() --> 
+                    <p class="text-danger" data-bind="text:loginFeedback"></p>
+                <!-- /ko -->
+                <label class="checkbox shadow">
                 <input type="checkbox" value="remember-me"> Remember me
                 </label>
-                <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+                <button class="btn btn-lg btn-primary btn-block" type="submit">Login &raquo;</button>
+                <button class="btn btn-lg btn-success btn-block"type="submit" data-bind="click:showSignup" href="#">Sign Up &raquo;</button>
+                </div>
             </form>
         </div>
+
     </div> 
 
     <!-- ==============  END SIGNUP PAGE   =============  -->
 
     <!-- ==============  DASHBOARD  =============  -->
 
-    <div style="display: none;" class="container" data-bind="visible: displayPage() == 'dashboard'">
+    <div style="display: none;" class="container dashboard" data-bind="visible: displayPage() == 'dashboard'">
         
-        <h2>DASHBOARD!!</h2>
+        <div class="col-lg-6 dashboard-panel">
+            <div>       
+                <h2>Heading</h2>
+                <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+                <p><a class="btn btn-primary" href="#">View details »</a></p>
+            </div>
+        </div>
+        <div class="col-lg-3 dashboard-panel">
+            <div>       
+                <h2>Heading</h2>
+                <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+                <p><a class="btn btn-primary" href="#">View details »</a></p>
+            </div>
+        </div>
+        <div class="col-lg-3 dashboard-panel">
+            <div>       
+                <h2>Heading</h2>
+                <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+                <p><a class="btn btn-primary" href="#">View details »</a></p>
+            </div>
+        </div>
     </div>
 
     <!-- ==============  END DASHBOARD  =============  -->
@@ -89,10 +111,16 @@
             </div>
             <div class="modal-body">
                 <form class="form-signin" data-bind="submit:signup">
-                <input type="text" class="form-control" data-bind="value: signupEmail" placeholder="Email address" autofocus>
-                <input type="text" class="form-control" data-bind="value: signupName" placeholder="Username">
-                <input type="password" class="form-control" data-bind="value: signupPass" placeholder="Password">
-                <button class="btn btn-lg btn-primary btn-block" type="submit">Create Account</button>
+                <!-- ko if: signupFeedback() --> 
+                    <p class="text-danger" data-bind="text:signupFeedback"></p>
+                <!-- /ko -->
+                <div data-bind="formShake:shake" data-shakeon="signup">
+                    <input type="text" class="form-control top-input" data-bind="value: signupEmail, ajaxIcons: signupEmailStatus" placeholder="Email address" autofocus>
+                    <input type="text" class="form-control middle-input" data-bind="value: signupName, ajaxIcons: signupNameStatus" placeholder="Username">
+                    <input type="password" class="form-control bottom-input" data-bind="value: signupPass, ajaxIcons: signupPassStatus" placeholder="Password">
+                    <input type="text" class="form-control bump" data-bind="value:inviteCode" placeholder="Invite Code">
+                    <button class="btn btn-lg btn-primary btn-block" type="submit">Create Account</button>
+                </div>
             </form>
             </div>
         </div>

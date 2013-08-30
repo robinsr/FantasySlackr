@@ -3,13 +3,16 @@
 $(function(){
     $.fn.shake = function(){
         this.animate({
-            marginLeft: '-6px'
+            marginLeft: '-6px',
+            marginRight: '6px'
             }, 30, function (el) {
             $(this).animate({
-            marginLeft: '6px'
+            marginLeft: '6px',
+            marginRight: '-6px'
             }, 30, function (el) {
             $(this).animate({
-            marginLeft: '0'
+            marginLeft: '0',
+            marginRight: '0'
             }, 30)
             });
         });

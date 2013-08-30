@@ -241,3 +241,32 @@ module.exports.apiRequestCounter = function(level){
 module.exports.sampleResponses = function(obj){
 	db.metadata.insert(obj);
 }
+
+module.exports.checkValue = function(req, res, data){
+	console.log('check value triggered!')
+
+	if (data.type == "name") {
+		db.users.findOne({name: data.value},function(err,result){
+			if (err || result) {
+				res.writeHead(400);
+				res.end()
+			} else {
+				res.writeHead(200);
+				res.end();
+			}
+		})
+	} else if (data.type == "email"){
+		db.users.findOne({email: data.value},function(err,result){
+			if (err || result) {
+				res.writeHead(400);
+				res.end()
+			} else {
+				res.writeHead(200);
+				res.end();
+			}
+		})
+	} else {
+		res.writeHead(400)
+		res.end();
+	}
+}

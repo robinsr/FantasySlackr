@@ -430,6 +430,11 @@ function handler(req,res){
             respondOk(req,res,data);
         });
         return
+    } else if (p == '/method/checkValue'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            db.checkValue(req,res,data);
+        });
+        return
     } else {
         serveStatic.serveStatic(req,res);
         return;
