@@ -85,14 +85,24 @@ function getUserData(req,res,data){
                                 res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
                             } else {
                                 return_object.teams = [];
+                                return_object.leagues = [];
                                 async.each(teams,function(a,b){
                                     db.getTeam(a.team_key,function(err,team){
                                         if (err){
                                             b("error")
                                         } else {
                                             delete team.owner;
-                                            return_object.teams.push(team);
-                                            b(null);
+                                            console.log(utils.inspect(team));
+                                            db.getLeague(team.league,function(err,league){
+                                                if (err){
+                                                    b("error")
+                                                } else {
+                                                    console.log(league);
+                                                    team.league = league;
+                                                    return_object.teams.push(team);
+                                                    b(null);
+                                                }
+                                            })
                                         }
                                     })
                                 },function(err){
@@ -102,7 +112,7 @@ function getUserData(req,res,data){
                                     } else {
                                         res.writeHead(200);
                                         res.end(JSON.stringify(return_object));
-                                    }
+                                    } 
                                 })
                             }
                         })
@@ -371,9 +381,15 @@ function handler(req,res){
         handleApiCallback(req,res);
         return;
     } else if (p == '/test'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            testLeague(req,res,data);
-        });
+        db.testQuery(function(err){
+            if (err){
+                res.writeHead(400);
+                res.end();
+            } else {
+                res.writeHead(200);
+                res.end();
+            }
+        })
         return  
     } else if (p == '/method/login'){
         slackr_utils.ajaxBodyParser(req,function(data){

@@ -33,9 +33,11 @@ function setupRoster(user_object,newTeam,token,secret,cb){
             }
             db.sampleResponses(sample);
             var doc = new dom().parseFromString(result);
+
             var players = xpath.select('//player',doc);
 
             async.each(players,function(player,b){
+                console.log(xpath.select('selected_position/position/text()',player).toString());
                 newTeam.roster.push(new obj.player({
                     id: new objectid(),
                     player_key:     xpath.select('player_key/text()',player).toString(),
@@ -43,6 +45,7 @@ function setupRoster(user_object,newTeam,token,secret,cb){
                     first:          xpath.select('name/first/text()',player).toString(),
                     last:           xpath.select('name/last/text()',player).toString(),
                     position:       xpath.select('eligible_positions/position/text()',player).toString(),
+                    selected_position: xpath.select('selected_position/position/text()',player).toString(),
                     injury_status: 'unknown',
                     bye_week:       xpath.select('bye_weeks/week/text()',player).toString(),
                     undroppable:    xpath.select('is_undroppable/text()',player).toString()
@@ -81,15 +84,26 @@ function setupLeague(user_object,league_key,token,secret,cb){
                     db.sampleResponses(sample);
 
                     var doc = new dom().parseFromString(result);
+
                     var league = {
                         _id : new objectid(),
                         league_key : xpath.select('//league/league_key/text()',doc).toString(),
                         name: xpath.select('//league/name/text()',doc).toString(),
-                        url: xpath.select('//league/url/text()',doc).toString()
+                        url: xpath.select('//league/url/text()',doc).toString(),
+                        roster_positions: []
                     }
 
-                    db.addToLeagues(league);
-                    cb(null);
+                    var positions = xpath.select('//roster_position',doc);
+                    async.each(positions,function(pl,next){
+                        league.roster_positions.push({
+                            position: xpath.select('position/text()',pl).toString(),
+                            count:xpath.select('count/text()',pl).toString()
+                        })
+                        next();
+                    },function(err){
+                        db.addToLeagues(league);
+                        cb(null);
+                    })
                 }
             });
         } 

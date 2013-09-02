@@ -48,6 +48,7 @@ module.exports.player = function(obj){
 	this.player_first = obj.first;
 	this.player_last = obj.last;
 	this.position = obj.position;
+	this.selected_position = obj.selected_position;
 	this.injury_status = obj.injury_status;
 	this.bye_week = obj.bye_week;
 	this.undroppable = obj.undroppable;

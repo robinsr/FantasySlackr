@@ -6,7 +6,7 @@ var redis = require('redis'),
 	db = require("mongojs").connect(databaseUrl, collections),
 	utils  = require('util');
 
-	dbConventions = {
+var	dbConventions = {
 	"session":"fantasySession:",
 	"temp":"fantasyTempOauth:"
 };
