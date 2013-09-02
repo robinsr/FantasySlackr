@@ -30,6 +30,7 @@ function player(obj){
 	this.player_first = obj.player_first;
 	this.player_last = obj.player_last;
 	this.position = obj.position;
+	this.selected_position = ko.observable(obj.selected_position);
 	this.injury_status = obj.injury_status;
 	this.bye_week = obj.bye_week;
 	this.undroppable = obj.undroppable;
@@ -83,6 +84,7 @@ function AppViewModel() {
 	self.teams = ko.observableArray([]);
 	self.leagues = ko.observableArray([]);
 
+	// selected team changes UI
 	self.selectedTeam = ko.observable();
 	self.selectedPlayers = ko.computed(function(){
 		return ko.utils.arrayFilter(self.players(),function(player){
@@ -90,11 +92,75 @@ function AppViewModel() {
 		})
 	})
 
-	self.selectedTeam.subscribe(function(val){
-		console.log(val);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//  FOR THE SAKE OF FIGURING OUT WHAT THE F I WAS DOING......
+
+
+		// THIS COMPUTED ARRAY RETURNS ALL THE PLAYERS THAT ARE IN THE SELECTED TEAM AND HAVE A SELECTE_POSITION
+		// THE SAME AS THEIR POSITION. ie THEY ARE STARTERS AND NOT BENCHED
+	self.startingPlayers = ko.computed(function(){
+		return ko.utils.arrayFilter(self.players(),function(pos){
+			return ((pos.selected_position() == pos.position) && (pos.team_key == self.selectedTeam().team_key))
+		})
 	})
 
+		// THIS FUNCTION ATTEMPS TO DETERMINE OF THERE ARE TOO MANY PLAYERS STARTING FOR EACH POSITION
+		// IT WORKS BUT ITS NOT OBSERVABLE SO ITS KINDA USELESS FOR RIGHT NOW
+	self.startingPlayers.subscribe(function(value){
+		//console.log(value);
+		var positions = {};
+		$(value).each(function(){
+			if (typeof self.psotitionLimit()[this.position] == 'undefined'){
+				self.psotitionLimit()[this.position] = 1
+			} else {
+				self.psotitionLimit()[this.position]++
+			}
+		})
+		for (n in self.psotitionLimit()){
+			//console.log(n,positions[n])
+			var positionLimit = $.map(self.selectedTeam().league.roster_positions, function(obj) {
+			    if(obj.position === n)
+			         return obj.count; // or return obj.name, whatever.
+			});
+			if (self.psotitionLimit()[n] > positionLimit){
+				console.log('too many '+n)
+			}
+		}
+	})
 
+		// THIS COMPUTED GETS ALL THE QBs STARTING
+		// I WOULF REALLY LIKE IT IF FUTURE ME COULD FIND A WAY TO MAKE AN ALL-ENCOMASING FUNCTION THAT
+		// MAKES FUNCTIONS LIKE THIS FOR EACH POSITION IRRELEVANT. THAT IS, SOMETHING THAT MAKES OBSERVABLES
+		// FOR EACH POSITION AND HOW MAY STARTERS THAT POSITION HAS
+	self.startingQB = ko.computed(function(){
+		return ko.utils.arrayFilter(self.players(),function(pos){
+			return ((pos.selected_position() == "QB") && (pos.team_key == self.selectedTeam().team_key))
+		})
+	})
+
+		// SAME IDEA AS ABOVE. THIS FUNCTION FINDS THE MAX AMOUNT OF PLAYERS ALLOWED FOR THE QB POSITION
+		// DETERMINED BY THE USERS LEAGUE SETTINGS
+	self.limitQB = ko.computed(function(){
+		return ko.arrayFilter(self.selectedTeam().league.roster_positions(),function(pos){
+			if (pos.position == "QB"){
+				return pos.count()
+			}
+		})
+	})
+
+		// end bull shit
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	
 
 	// modal controls
 
@@ -116,7 +182,6 @@ function AppViewModel() {
 			if (stat == 200) {
 				var data = JSON.parse(text);
 				user.session = data.session;
-
 				user.name = self.loginName();
 
 				self.loginFeedback('');
@@ -163,21 +228,25 @@ function AppViewModel() {
 	}
 	self.yahooValidated = function(){
 		setTimeout(function(){
+			console.log(new Date().getTime())
 			utils.issue("method/login",{
 				uname: self.signupName(),
 				upass: self.signupPass()
 			},function(err,stat,text){
 				if (stat == 200) {
 					var data = JSON.parse(text);
-					self.session = data.session;
+					user.session = data.session;
+					user.name = self.signupName();
 					self.getUserData();
+					self.modalStatus('');
 				} else if (stat == 400) {
 					self.shake('login')
 				} else {
 					self.modalStatus('server-error');
 				}
 			})
-		},300)
+		},2000)
+		console.log(new Date().getTime())
 	}
 	self.getUserData = function(){
 		utils.issue("method/getUserData", {
