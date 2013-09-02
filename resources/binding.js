@@ -66,14 +66,54 @@ ko.bindingHandlers.ajaxIcons = {
 };
 ko.bindingHandlers.changeSetting = {
     init: function(element, valueAccessor){
+        var value = valueAccessor()
         $(element).change(function(){
-            console.log(this.value)
-            fantasyslackr.viewmodel.selectedTeam().settings.lack_of_players(this.value);
+            console.log(value())
+            value(this.value);
+            console.log(value())
         })
     },
     update: function(element, valueAccessor){
         var value = valueAccessor()
-        var set = value.selectedTeam().settings.lack_of_players();
-        $(element).val(set);
+        $(element).val(value());
+    }
+}
+ko.bindingHandlers.accordianClick = {
+    init: function(element, valueAccessor){
+        var value = valueAccessor();
+        $(element).click(function(){
+            var select = "#" + value;
+            console.log(value);
+            $(select).collapse();
+            console.log($(select))
+        })
+    },
+    update: function(element, valueAccessor){
+        var value = valueAccessor()
+        $(element).val(value());
+    }
+}
+ko.bindingHandlers.startOrBench = {
+    init: function(element, valueAccessor){
+        var value = valueAccessor();
+        $(element).click(function(){
+            var button = $(this).text();
+            if (button == "Start"){
+                value.selected_position(value.position);
+            } else if (button == "Bench") {
+                value.selected_position("BN");
+            }
+        })
+    },
+    update: function(element, valueAccessor){
+        console.log()
+        var value = valueAccessor();
+        if ((value.selected_position() == "BN") && ($(element).text() == "Bench")){
+            $(element).addClass("btn-primary");
+        } else if ((value.selected_position() != "BN") && ($(element).text() != "Bench")){
+            $(element).addClass("btn-primary");
+        } else {
+            $(element).removeClass("btn-primary");
+        }
     }
 }
