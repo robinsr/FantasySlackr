@@ -78,7 +78,17 @@
         <div class="col-lg-6 dashboard-panel">
             <div> 
             <select data-bind="options: teams, optionsText: 'name', value: selectedTeam"></select>
-                <table data-bind="if: selectedPlayers().length > 0">
+            <table class="table" data-bind="if: selectedPlayers().length > 0">
+                <tr>
+                    <td data-bind="text: startingQB().length + '/' + limitQB"></td>
+                    <td data-bind="text: startingRB + '/' + limitRB"></td>
+                    <td data-bind="text: startingWR + '/' + limitWR"></td>
+                    <td data-bind="text: startingTE + '/' + limitte"></td>
+                    <td data-bind="text: startingK + '/' + limitK"></td>
+                    <td data-bind="text: startingDEF + '/' + limitDEF"></td>
+                </tr>
+            </table>
+                <table data-bind="if: selectedPlayers().length > 0" class="table">
                     <thead>
                     <tr>
                         <th>Sel</th>
@@ -88,6 +98,7 @@
                         <th>Bye</th>
                     </tr>
                     </thead>
+                   
                     <tbody data-bind="foreach: selectedPlayers">
                         <tr>
                             <td><input type="checkbox"></input></td>
@@ -95,7 +106,10 @@
                             <td data-bind="text: position"></td>
                             <td data-bind="text: injury_status"></td>
                             <td data-bind="text: bye_week"></td>
-                            <td><button type="button" class="btn btn-default btn-xs">Move</button></td>
+                            <td>
+                                <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Start</button>
+                                <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Bench</button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -105,50 +119,82 @@
             </div>
         </div>
         <div class="col-lg-3 dashboard-panel">
-            <div>       
+            <div >       
                 <div class="panel-group" id="accordion">
-                  <div class="panel panel-default">
-                    <div class="panel-heading">
-                      <h4 class="panel-title">
-                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
-                          Team Settings
-                        </a>
-                      </h4>
-                    </div>
-                    <div id="collapseOne" class="panel-collapse collapse">
-                      <div class="panel-body">
-                        <div class="control-group">
-                            <label class="control-label">Ask before dropping/replacing</label>
-                            <div class="controls">
-                              <label class="checkbox inline">
-                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_qb"> QB
-                              </label>
-                              <label class="checkbox inline">
-                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_rb"> RB
-                              </label>
-                              <label class="checkbox inline">
-                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_wr"> WR
-                              </label>
-                              <label class="checkbox inline">
-                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_te"> TE
-                              </label>
-                              <label class="checkbox inline">
-                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_def"> DEF
-                              </label>
-                              <label class="checkbox inline">
-                                <input type="checkbox" data-bind="checked: selectedTeam().settings.ask_k"> K
-                              </label>
-                            </div>
+                      <div class="panel panel-default">
+                        <div class="panel-heading">
+                          <h4 class="panel-title">
+                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">Team Settings</a>
+                          </h4>
+                        </div>
+                        <div class="panel-collapse collapse" id="collapseOne">
+                          <div class="panel-body" data-bind="foreach: teams">
+                          <!-- ko if: team_key == $root.selectedTeam().team_key -->
+                            <div class="control-group">
+                                <label class="control-label">Ask before dropping/replacing</label>
+                                <div class="controls">
+                                  <label class="checkbox inline">
+                                    <input type="checkbox" data-bind="checked: settings.ask_qb"> QB
+                                  </label>
+                                  <label class="checkbox inline">
+                                    <input type="checkbox" data-bind="checked: settings.ask_rb"> RB
+                                  </label>
+                                  <label class="checkbox inline">
+                                    <input type="checkbox" data-bind="checked: settings.ask_wr"> WR
+                                  </label>
+                                  <label class="checkbox inline">
+                                    <input type="checkbox" data-bind="checked: settings.ask_te"> TE
+                                  </label>
+                                  <label class="checkbox inline">
+                                    <input type="checkbox" data-bind="checked: settings.ask_def"> DEF
+                                  </label>
+                                  <label class="checkbox inline">
+                                    <input type="checkbox" data-bind="checked: settings.ask_k"> K
+                                  </label>
+                                </div>
+                              </div>
+                              <div class="form-group">
+                                  <label>Probable</label>
+                                  <select>
+                                    <option value="start">Start</option>
+                                    <option value="bench">Bench</option>
+                                    <option value="DIF">Replace if necessary</option>
+                                    <option value="replace">Replace always</option>
+                                    <option value="ask">Ask me</option>
+                                  </select>
+                              </div>
+                              <div class="form-group">
+                              <label>Questionable</label>
+                              <select>
+                                <option value="start">Start</option>
+                                <option value="bench">Bench</option>
+                                <option value="DIF">Replace if necessary</option>
+                                <option value="replace">Replace always</option>
+                                <option value="ask">Ask me</option>
+                              </select>
+                              </div>
+                              <div class="form-group">
+                              <label>Out Player</label>
+                              <select>
+                                <option value="bench">Bench</option>
+                                <option value="DIF">Replace if necessary</option>
+                                <option value="replace">Replace always</option>
+                                <option value="ask">Ask me</option>
+                              </select>
+                              </div>
+                              <div class="form-group">
+                              <label>Lack of Players</label>
+                              <select data-bind="changeSetting:settings.lack_of_players">
+                                <option value="replace_bye">Replace Bye</option>                        
+                                <option value="replace_injured">Replace Injuredz</option>
+                                <option value="ask">Ask me</option>
+                                <option value="do_nothing">Do Nothing</option>
+                              </select>
+                              </div>
+                              <!-- /ko -->
                           </div>
-                          <select data-bind="changeSetting:$data">
-                            <option value="replace_bye">Replace player on bye</option>                        
-                            <option value="replace_injured">Replace injured player</option>
-                            <option value="ask">Ask me</option>
-                            <option value="do_nothing">Do Nothing</option>
-                          </select>
+                        </div>
                       </div>
-                    </div>
-                  </div>
                   <div class="panel panel-default">
                     <div class="panel-heading">
                       <h4 class="panel-title">
