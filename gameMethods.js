@@ -48,7 +48,8 @@ function setupRoster(user_object,newTeam,token,secret,cb){
                     selected_position: xpath.select('selected_position/position/text()',player).toString(),
                     injury_status: 'unknown',
                     bye_week:       xpath.select('bye_weeks/week/text()',player).toString(),
-                    undroppable:    xpath.select('is_undroppable/text()',player).toString()
+                    undroppable:    xpath.select('is_undroppable/text()',player).toString(),
+                    image_url:      xpath.select('image_url/text()',player).toString()
                 }))
                 b(null);
             },
