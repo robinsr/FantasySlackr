@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,20 +50,20 @@
             <form class="form-signin" data-bind="submit:login">
                 <div data-bind="formShake:shake" data-shakeon="login">
                 <h2 class="form-signin-heading shadow">Login</h2>
-                <input type="text" class="form-control top-input" data-bind="value: loginName" placeholder="Username" autofocus>
-                <input type="password" class="form-control bottom-input" data-bind="value: loginPass" placeholder="Password">
+                <input tabindex="0" type="text" class="form-control top-input" data-bind="value: loginName" placeholder="Username" autofocus>
+                <input tabindex="1" type="password" class="form-control bottom-input" data-bind="value: loginPass" placeholder="Password">
                 <!-- ko if: loginFeedback() --> 
                     <p class="text-danger" data-bind="text:loginFeedback"></p>
                 <!-- /ko -->
                 <label class="checkbox shadow">
                 <input type="checkbox" value="remember-me"> Remember me
                 </label>
-                <button class="btn btn-lg btn-primary btn-block" type="submit">Login &raquo;</button>
-                <button class="btn btn-lg btn-success btn-block"type="submit" data-bind="click:showSignup" href="#">Sign Up &raquo;</button>
+                <button tabindex="2" class="btn btn-lg btn-primary btn-block" type="submit">Login &raquo;</button>
+                <button tabindex="3" class="btn btn-lg btn-success btn-block"type="submit" data-bind="click:showSignup" href="#">Sign Up &raquo;</button>
                 </div>
                 <div class="about-controls">
-                    <button type="button" data-bind="click: startDemo" class="about-button btn btn-default">Demo</button>
-                    <button type="button" data-bind="click: showAbout" class="about-button btn btn-default">About</button>
+                    <button tabindex="4" type="button" data-bind="click: startDemo" class="about-button btn btn-default">Demo</button>
+                    <button tabindex="5" type="button" data-bind="click: showAbout" class="about-button btn btn-default">About</button>
                 </div>
             </form>
         </div>
