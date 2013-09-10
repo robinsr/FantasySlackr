@@ -36,6 +36,7 @@ module.exports.ajaxBodyParser = function(req,cb){
       } catch(ex) {
         parsed = {}
       } finally {
+        console.log(utils.inspect(parsed))
         cb(parsed);
       }
     });

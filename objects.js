@@ -52,6 +52,7 @@ module.exports.player = function(obj){
 	this.injury_status = obj.injury_status;
 	this.bye_week = obj.bye_week;
 	this.undroppable = obj.undroppable;
+	this.image_url = obj.image_url;
 	this.projected_points = {};
 	this.settings = {
 		never_drop: false,

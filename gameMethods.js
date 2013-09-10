@@ -64,6 +64,16 @@ function setupRoster(user_object,newTeam,token,secret,cb){
         }
     }) 
 }
+function updateRoster(user_object,team_key,token,secret,cb){
+    var url = apiUrls.rosterA+team_key+apiUrls.rosterB
+    oauth.getYahoo(url,token,secret,function(err,result){
+        if (err) {
+            console.log('error updateRoster')
+        } else {
+
+        }
+    })
+}
 function setupLeague(user_object,league_key,token,secret,cb){
     console.log(league_key);
     db.getLeague(league_key,function(err,result){

@@ -23,7 +23,7 @@
 
   <!-- ==============  NAV   =============  -->
 
-    <div class="navbar navbar-inverse navbar-fixed-top" data-bind="visible: displayPage() != 'login'">
+<!--     <div class="navbar navbar-default navbar-fixed-top" role="navigation" data-bind="visible: displayPage() != 'login'">
         <div class="container">
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
@@ -35,21 +35,19 @@
             </div>
             <div class="collapse navbar-collapse">
                 <ul class="nav navbar-nav">
-                    <li class="active"><a href="#">Lineup</a></li>
-                    <li><a href="#about">Settings</a></li>
-                    <li><a href="#contact">Activity</a></li>
+                    <li class="active"><a href="#">Logout</a></li>
                 </ul>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <!-- ==============  END NAV   =============  -->
 
     <!-- ==============  LOGIN PAGE   =============  -->
 
     <div class="container" data-bind="visible: displayPage() == 'login'">
-        <div class="col-lg-6">
-        <h1 class="form-signin jumbo">FantasySlackr</h1>
+    <h1 class="jumbo">FantasySlackr</h1>
+        <div class="col-lg-12">
             <form class="form-signin" data-bind="submit:login">
                 <div data-bind="formShake:shake" data-shakeon="login">
                 <h2 class="form-signin-heading shadow">Login</h2>
@@ -64,6 +62,10 @@
                 <button class="btn btn-lg btn-primary btn-block" type="submit">Login &raquo;</button>
                 <button class="btn btn-lg btn-success btn-block"type="submit" data-bind="click:showSignup" href="#">Sign Up &raquo;</button>
                 </div>
+                <div class="about-controls">
+                    <button type="button" data-bind="click: startDemo" class="about-button btn btn-default">Demo</button>
+                    <button type="button" data-bind="click: showAbout" class="about-button btn btn-default">About</button>
+                </div>
             </form>
         </div>
 
@@ -77,49 +79,56 @@
         
         <div class="col-lg-6 dashboard-panel">
             <div> 
+            <h2>Roster</h2>
             <select data-bind="options: teams, optionsText: 'name', value: selectedTeam"></select>
-            <table class="table" data-bind="if: selectedPlayers().length > 0">
-                <tr>
-                    <td data-bind="text: startingQB().length + '/' + limitQB"></td>
-                    <td data-bind="text: startingRB + '/' + limitRB"></td>
-                    <td data-bind="text: startingWR + '/' + limitWR"></td>
-                    <td data-bind="text: startingTE + '/' + limitte"></td>
-                    <td data-bind="text: startingK + '/' + limitK"></td>
-                    <td data-bind="text: startingDEF + '/' + limitDEF"></td>
-                </tr>
-            </table>
-                <table data-bind="if: selectedPlayers().length > 0" class="table">
-                    <thead>
-                    <tr>
-                        <th>Sel</th>
-                        <th>Name</th>
-                        <th>Pos</th>
-                        <th>Inj</th>
-                        <th>Bye</th>
+            <div class="table-responsive">
+                <table class="table table-condensed" data-bind="if: selectedPlayers().length > 0">
+                    <tbody>
+                    <tr data-bind="foreach: positions">
+                    <!-- ko if: team_key == $root.selectedTeam().team_key && position != 'BN'-->
+                        <td data-bind="text:position+':', positionCountIndicator:$data"></td>
+                        <td data-bind="text: starters() +'/'+ count, positionCountIndicator:$data"></td>
+                        <!-- /ko -->
                     </tr>
-                    </thead>
-                   
-                    <tbody data-bind="foreach: selectedPlayers">
-                        <tr>
-                            <td><input type="checkbox"></input></td>
-                            <td data-bind="text: player_full_name"></td>
-                            <td data-bind="text: position"></td>
-                            <td data-bind="text: injury_status"></td>
-                            <td data-bind="text: bye_week"></td>
-                            <td>
-                                <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Start</button>
-                                <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Bench</button>
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
-                <div data-bind="if: selectedPlayers().length == 0">
-                    <p>Roster Empty</p>
+                <table data-bind="if: selectedPlayers().length > 0" class="table table-condensed">
+                        <thead>
+                        <tr>
+                            <th>Sel</th>
+                            <th>Name</th>
+                            <th>Pos</th>
+                            <th>Inj</th>
+                            <th>Bye</th>
+                        </tr>
+                        </thead>
+                      
+                        <tbody data-bind="foreach: selectedPlayers">
+                            <tr>
+                                <td><button type="button" class="btn btn-default btn-xs btn-select" data-bind="click:$root.selectPlayer,checkSelPlayer:$root.selectedPlayer">&nbsp;</button></td>
+                                <td data-bind="text: player_full_name"></td>
+                                <td data-bind="text: position"></td>
+                                <td data-bind="text: injury_status"></td>
+                                <td data-bind="text: bye_week"></td>
+                                <td>
+                                    <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Start</button>
+                                    <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Bench</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+
+                <div data-bind="if: selectedPlayers().length == 0">
+                    <p class="text-center">Roster Empty</p>
+                </div>
+
+
             </div>
         </div>
         <div class="col-lg-3 dashboard-panel">
-            <div >       
+            <div >
+            <h2>Settings</h2>
                 <div class="panel-group" id="accordion">
                       <div class="panel panel-default">
                         <div class="panel-heading">
@@ -155,7 +164,7 @@
                               </div>
                               <div class="form-group">
                                   <label>Probable</label>
-                                  <select>
+                                  <select data-bind="changeSetting: settings.probable_player">
                                     <option value="start">Start</option>
                                     <option value="bench">Bench</option>
                                     <option value="DIF">Replace if necessary</option>
@@ -165,7 +174,7 @@
                               </div>
                               <div class="form-group">
                               <label>Questionable</label>
-                              <select>
+                              <select data-bind="changeSetting:settings.questionable_player">
                                 <option value="start">Start</option>
                                 <option value="bench">Bench</option>
                                 <option value="DIF">Replace if necessary</option>
@@ -175,7 +184,7 @@
                               </div>
                               <div class="form-group">
                               <label>Out Player</label>
-                              <select>
+                              <select data-bind="changeSetting:settings.out_player">
                                 <option value="bench">Bench</option>
                                 <option value="DIF">Replace if necessary</option>
                                 <option value="replace">Replace always</option>
@@ -205,8 +214,39 @@
                     </div>
                     <div id="collapseTwo" class="panel-collapse collapse">
                       <div class="panel-body">
-                        Anim pariatur cliche reprehenderit, enim eiusmod high life accusamus terry richardson ad squid. 3 wolf moon officia aute, non cupidatat skateboard dolor brunch. 
+                        <div data-bind="foreach: players">
+                          
+                          <div class="player-settings" data-bind="if: player_key == $root.selectedPlayer() && team_key == $root.selectedTeam().team_key">
+                            <div class="image-wrap">
+                                <img data-bind="attr:{'src':image_url}">
+                            </div>
+                            <div class="player-name">
+                                <p data-bind="text: player_full_name" class="text-center"></p>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" data-bind="checked: settings.never_drop">
+                                    Never Drop
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" data-bind="checked: settings.start_if_probable">
+                                    Start if Probable
+                                </label>
+                            </div>
+                            <div class="checkbox">
+                                <label>
+                                    <input type="checkbox" data-bind="checked: settings.start_if_questionable">
+                                    Start if Questionable
+                                </label>
+                            </div>
+                            </div>
+                          
+                          </div>
+                          <p data-bind="if: selectedPlayer() == undefined" class="text-center">No Player Selected</p>
                       </div>
+                        
                     </div>
                   </div>
                 </div>
@@ -214,9 +254,13 @@
         </div>
         <div class="col-lg-3 dashboard-panel">
             <div>       
-                <h2>Heading</h2>
-                <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
-                <p><a class="btn btn-primary" href="#">View details »</a></p>
+                <h2>Activity</h2>
+                <div data-bind="foreach: activityEntries">
+                    <div class="activity-item well well-sm">
+                        <small><em data-bind="formatDate:date"></em></small>
+                        <p class="text-muted" data-bind="text:message"></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -234,6 +278,7 @@
             </div>
             <div class="modal-body">
                 <form class="form-signin" data-bind="submit:signup">
+                <p class="text-muted text-center">FantasySlackr is pre-beta and really only for demonstration. However you can sign up provided you have an invite code.</p>
                 <!-- ko if: signupFeedback() --> 
                     <p class="text-danger" data-bind="text:signupFeedback"></p>
                 <!-- /ko -->
@@ -244,6 +289,24 @@
                     <input type="text" class="form-control bump" data-bind="value:inviteCode" placeholder="Invite Code">
                     <button class="btn btn-lg btn-primary btn-block" type="submit">Create Account</button>
                 </div>
+            </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade in" data-bind="modalVis:modalStatus" data-showon="about" style="display:none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+            <button type="button" class="close" data-bind="click:closeModals">&times;</button>
+                <h4>FantasySlackr - 2013 - Ryan Robinson</h4>
+            </div>
+            <div class="modal-body">
+                <h5>For Demonstration Only</h5>
+                <p class="text-muted">FantasySlackr interfaces with Yahoo Fantasy Sports to automate routine maintenance of a user's fantasy football team. This includes changing the lineup, dropping injured players, and drafting new players.</p>
+                <p class="text-muted">The goal is to keep every position in the user's starting lineup filled with the best possible player that will score the most points. A user can modify their lineup however that wish without FantasySlackr overwriting. A user can also designate players or positions to never drop and players to start regardless of injury status.</p>
+                <p class="text-muted">This project required knowledge of OAuth 1.0 protocol, Yahoo Web APIs, NodeJS, MongoDB, KnockoutJS, jQuery, and Bootstrap 3.0.</p>
+                <p><a href="https://github.com/robinsr/FantasySlackr">FantasySlackr on GitHub</a></p>
             </form>
             </div>
         </div>

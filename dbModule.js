@@ -2,7 +2,7 @@ var redis = require('redis'),
 	client = redis.createClient(),
 	slackr_utils = require('./slackr_utils'),
 	databaseUrl = "fantasyslackr",
-	collections = ["users", "players", "teams", "metadata","leagues"],
+	collections = ["users", "players", "teams", "metadata", "leagues", "activity"],
 	db = require("mongojs").connect(databaseUrl, collections),
 	utils  = require('util');
 
@@ -269,4 +269,26 @@ module.exports.checkValue = function(req, res, data){
 		res.writeHead(400)
 		res.end();
 	}
+}
+module.exports.getActivity = function(username,cb){
+	db.activity.find({name:username},function(err,result){
+		if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,result);
+       	return;
+       }
+	})
+}
+module.exports.getActivityItem = function(itemId,cb){
+	db.activity.findOne({_id:itemId},function(err,result){
+		if (err){
+       	cb(1);
+       	return
+       } else {
+       	cb(null,result);
+       	return;
+       }
+	})
 }

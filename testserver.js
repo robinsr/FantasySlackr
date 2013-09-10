@@ -71,52 +71,78 @@ function getUserData(req,res,data){
                 respondInsufficient(req,res)
             } else {
                 var return_object = {};
-                db.getFromUserDb(data.uname,function(err,dbdata){
-                    if (err) {
+                var userId;
+                async.series([
+                function(callback){
+                    db.getFromUserDb(data.uname,function(err,dbdata){
+                        if (err) {
+                            callback('error')
+                        } else {
+                            return_object.name = dbdata.name;
+                            return_object.email = dbdata.email;
+                            userId = dbdata._id
+                            callback(null);
+                        }
+                    })
+                },
+                function(callback){
+                    db.getUsersTeams(userId,function(err,teams){
+                        if (err) {
+                            callback('error');
+                        } else {
+                            return_object.teams = [];
+                            return_object.leagues = [];
+                            async.each(teams,function(a,b){
+                                db.getTeam(a.team_key,function(err,team){
+                                    if (err){
+                                        b("error")
+                                    } else {
+                                        delete team.owner;
+                                        console.log(utils.inspect(team));
+                                        db.getLeague(team.league,function(err,league){
+                                            if (err){
+                                                b("error")
+                                            } else {
+                                                console.log(league);
+                                                team.league = league;
+                                                return_object.teams.push(team);
+                                                b(null);
+                                            }
+                                        })
+                                    }
+                                })
+                            },function(err){callback(err)})
+                        }
+                    })
+                },
+                function(callback){
+                    db.getActivity(data.uname,function(err,feed){
+                        if (err) {
+                            callback('error')
+                        } else {
+                            return_object.activity = [];
+                            async.each(feed,function(a,b){
+                                db.getActivityItem(a._id,function(err,item){
+                                    if (err){
+                                        b("error")
+                                    } else {
+                                        return_object.activity.push(item)
+                                        b(null)
+                                    }
+                                })
+                            },function(err){callback(err)})
+                        }
+                    })
+                }
+                ],
+                function(err,result){
+                    if (err){
                         res.writeHead(500);
                         res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
                     } else {
-                        return_object.name = dbdata.name;
-                        return_object.email = dbdata.email,
-
-                        db.getUsersTeams(dbdata._id,function(err,teams){
-                            if (err) {
-                                res.writeHead(500);
-                                res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
-                            } else {
-                                return_object.teams = [];
-                                return_object.leagues = [];
-                                async.each(teams,function(a,b){
-                                    db.getTeam(a.team_key,function(err,team){
-                                        if (err){
-                                            b("error")
-                                        } else {
-                                            delete team.owner;
-                                            console.log(utils.inspect(team));
-                                            db.getLeague(team.league,function(err,league){
-                                                if (err){
-                                                    b("error")
-                                                } else {
-                                                    console.log(league);
-                                                    team.league = league;
-                                                    return_object.teams.push(team);
-                                                    b(null);
-                                                }
-                                            })
-                                        }
-                                    })
-                                },function(err){
-                                    if (err){
-                                        res.writeHead(500);
-                                        res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
-                                    } else {
-                                        res.writeHead(200);
-                                        res.end(JSON.stringify(return_object));
-                                    } 
-                                })
-                            }
-                        })
-                    }
+                        res.writeHead(200);
+                        res.end(JSON.stringify(return_object));
+                    } 
                 })
             }
         })

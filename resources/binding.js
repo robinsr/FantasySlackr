@@ -68,9 +68,7 @@ ko.bindingHandlers.changeSetting = {
     init: function(element, valueAccessor){
         var value = valueAccessor()
         $(element).change(function(){
-            console.log(value())
             value(this.value);
-            console.log(value())
         })
     },
     update: function(element, valueAccessor){
@@ -115,5 +113,46 @@ ko.bindingHandlers.startOrBench = {
         } else {
             $(element).removeClass("btn-primary");
         }
+    }
+}
+ko.bindingHandlers.positionCountIndicator = {
+    init: function(element, valueAccessor){},
+    update: function(element, valueAccessor){
+        var value = valueAccessor()
+        if (value.starters() > parseInt(value.count)){
+            $(element).addClass('position-danger').removeClass('position-success');
+        } else if (value.starters() == parseInt(value.count)){
+            $(element).addClass('position-success').removeClass('position-danger');
+        } else {
+            $(element).removeClass('position-danger').removeClass('position-success');
+        }
+    }
+}
+ko.bindingHandlers.checkSelPlayer = {
+    init: function(){},
+    update: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext){
+        var value = valueAccessor();
+        if (bindingContext.$data.player_key == value()){
+            console.log('checking '+bindingContext.$data.player_full_name)
+            $(element).addClass("btn-primary").removeClass("btn-default")
+        } else {
+            $(element).addClass("btn-default").removeClass("btn-primary")
+        }
+    }
+}
+ko.bindingHandlers.formatDate = {
+    update: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext){
+        var value = valueAccessor();
+        var d = new Date(value);
+        var months = ['January','February','March','April','May','June','July','Auguest','September','October','November','December'];
+
+        function daySuffix(d) {
+            d = String(d);
+            return d.substr(-(Math.min(d.length, 2))) > 3 && d.substr(-(Math.min(d.length, 2))) > 21 ? "th" : ["th", "st", "nd", "rd", "th"][Math.min(Number(d)%10, 4)];
+        }
+
+        var dateString = months[d.getMonth()] + " " + d.getDate()  + daySuffix(d.getDate()) + ", " + d.getFullYear();
+
+        $(element).text(dateString);
     }
 }

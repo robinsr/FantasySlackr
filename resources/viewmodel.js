@@ -25,6 +25,7 @@ function team(obj){
 function player(obj){
 	_id = obj.id;
 	this.team_key = obj.team_key;
+	this.team_name = obj.team_name;
 	this.player_key = obj.player_key;
 	this.player_full_name = obj.player_full_name;
 	this.player_first = obj.player_first;
@@ -34,6 +35,7 @@ function player(obj){
 	this.injury_status = obj.injury_status;
 	this.bye_week = obj.bye_week;
 	this.undroppable = obj.undroppable;
+	this.image_url = obj.image_url;
 	this.projected_points = {};
 	this.settings = {
 		never_drop: ko.observable(obj.settings.never_drop),
@@ -49,6 +51,19 @@ function league(obj){
 	this.url = obj.url;
 }
 
+function position(obj){
+	var self = this;
+	self.position = obj.position;
+	self.count = obj.count;
+	self.starters = ko.computed(function(){
+		var numberOfStarters = ko.utils.arrayFilter(fantasyslackr.viewmodel.selectedPlayers(),function(pos){
+			return ((pos.selected_position() == pos.position) && (pos.selected_position() == self.position))
+		})
+		return numberOfStarters.length
+	});
+	self.team_key = obj.team_key;
+}
+
 
 function AppViewModel() {
 	var self = this;
@@ -56,7 +71,7 @@ function AppViewModel() {
 
 	// Laundry list of observables
 	self.modalStatus = ko.observable('none');
-	self.displayPage = ko.observable('login');
+	self.displayPage = ko.observable('login').extend({logChange: "first name"});
 	self.loginName = ko.observable();
 	self.loginPass = ko.observable();
 	
@@ -83,84 +98,18 @@ function AppViewModel() {
 	self.players = ko.observableArray([]);
 	self.teams = ko.observableArray([]);
 	self.leagues = ko.observableArray([]);
+	self.positions = ko.observableArray([]);
+	self.activityEntries = ko.observableArray([]);
 
 	// selected team changes UI
 	self.selectedTeam = ko.observable();
+	self.selectedPlayer = ko.observable();
 	self.selectedPlayers = ko.computed(function(){
 		return ko.utils.arrayFilter(self.players(),function(player){
 			return player.team_key == self.selectedTeam().team_key;
 		})
 	})
 
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//  FOR THE SAKE OF FIGURING OUT WHAT THE F I WAS DOING......
-
-
-		// THIS COMPUTED ARRAY RETURNS ALL THE PLAYERS THAT ARE IN THE SELECTED TEAM AND HAVE A SELECTE_POSITION
-		// THE SAME AS THEIR POSITION. ie THEY ARE STARTERS AND NOT BENCHED
-	self.startingPlayers = ko.computed(function(){
-		return ko.utils.arrayFilter(self.players(),function(pos){
-			return ((pos.selected_position() == pos.position) && (pos.team_key == self.selectedTeam().team_key))
-		})
-	})
-
-		// THIS FUNCTION ATTEMPS TO DETERMINE OF THERE ARE TOO MANY PLAYERS STARTING FOR EACH POSITION
-		// IT WORKS BUT ITS NOT OBSERVABLE SO ITS KINDA USELESS FOR RIGHT NOW
-	self.startingPlayers.subscribe(function(value){
-		//console.log(value);
-		var positions = {};
-		$(value).each(function(){
-			if (typeof self.psotitionLimit()[this.position] == 'undefined'){
-				self.psotitionLimit()[this.position] = 1
-			} else {
-				self.psotitionLimit()[this.position]++
-			}
-		})
-		for (n in self.psotitionLimit()){
-			//console.log(n,positions[n])
-			var positionLimit = $.map(self.selectedTeam().league.roster_positions, function(obj) {
-			    if(obj.position === n)
-			         return obj.count; // or return obj.name, whatever.
-			});
-			if (self.psotitionLimit()[n] > positionLimit){
-				console.log('too many '+n)
-			}
-		}
-	})
-
-		// THIS COMPUTED GETS ALL THE QBs STARTING
-		// I WOULF REALLY LIKE IT IF FUTURE ME COULD FIND A WAY TO MAKE AN ALL-ENCOMASING FUNCTION THAT
-		// MAKES FUNCTIONS LIKE THIS FOR EACH POSITION IRRELEVANT. THAT IS, SOMETHING THAT MAKES OBSERVABLES
-		// FOR EACH POSITION AND HOW MAY STARTERS THAT POSITION HAS
-	self.startingQB = ko.computed(function(){
-		return ko.utils.arrayFilter(self.players(),function(pos){
-			return ((pos.selected_position() == "QB") && (pos.team_key == self.selectedTeam().team_key))
-		})
-	})
-
-		// SAME IDEA AS ABOVE. THIS FUNCTION FINDS THE MAX AMOUNT OF PLAYERS ALLOWED FOR THE QB POSITION
-		// DETERMINED BY THE USERS LEAGUE SETTINGS
-	self.limitQB = ko.computed(function(){
-		return ko.arrayFilter(self.selectedTeam().league.roster_positions(),function(pos){
-			if (pos.position == "QB"){
-				return pos.count()
-			}
-		})
-	})
-
-		// end bull shit
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-	
 
 	// modal controls
 
@@ -170,19 +119,30 @@ function AppViewModel() {
 	self.closeModals = function(){
 		self.modalStatus('none');
 	}
+	self.showAbout = function(){
+		self.modalStatus('about');
+	}
 
 
 	// login/signup controls
 
 	self.login = function(uname,upass){
+		var username, password;
+		if (uname && upass){
+			username = uname;
+			password = upass;
+		} else {
+			username = self.loginName();
+			password = self.loginPass();
+		}
 		utils.issue("method/login",{
-		uname: self.loginName(),
-		upass: self.loginPass()
+		uname: username,
+		upass: password
 		},function(err,stat,text){
 			if (stat == 200) {
 				var data = JSON.parse(text);
 				user.session = data.session;
-				user.name = self.loginName();
+				user.name = username;
 
 				self.loginFeedback('');
 				self.loginName('');
@@ -248,6 +208,7 @@ function AppViewModel() {
 		},2000)
 		console.log(new Date().getTime())
 	}
+	
 	self.getUserData = function(){
 		utils.issue("method/getUserData", {
 			uname: user.name,
@@ -259,34 +220,32 @@ function AppViewModel() {
 				var data = JSON.parse(text);
 				$(data.teams).each(function(index, obj){
 					var thisTeamKey = this.team_key;
+					var thisTeamName = this.name;
 					self.teams.push(new team(this))
 					if (this.roster.length > 0){
 						$(this.roster).each(function(indexi, obji){
 							this.team_key = thisTeamKey;
+							this.team_name = thisTeamName;
 							self.players.push(new player(this))
 						});
 					}
+					if (this.league.roster_positions.length > 0){
+						$(this.league.roster_positions).each(function(indexi, obji){
+							this.team_key = thisTeamKey;
+							self.positions.push(new position(this))
+						});
+					}
+				});
+				$(data.activity).each(function(indexi, obji){
+					self.activityEntries.push(this)
 				});
 				self.displayPage('dashboard');
 			}
 		})
 	}
-
-	self.lackOfPlayersOptions = ko.observableArray([
-		{
-			name: "Replace Player on Bye", 
-			value: "replace_bye"
-		},{
-	    	name: "Replace Injured Player",
-	    	value: "replace_injured"
-	    },{
-	    	name: "Ask before doing anything",
-	    	value: "ask"
-	    },{
-	    	name: "Do Nothing",
-	    	value: "do_nothing"
-	    }
-	])
+	self.startDemo = function(){
+		self.login('name','pass');
+	}
 
 
 	// ui functions
@@ -300,6 +259,9 @@ function AppViewModel() {
 	});
 	self.resetShake = function(){
 		self.shake('');
+	}
+	self.selectPlayer = function(data){
+		self.selectedPlayer(data.player_key);
 	}
 
 }

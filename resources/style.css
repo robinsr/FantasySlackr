@@ -1,6 +1,6 @@
 body {
-	padding-top: 40px;
-	padding-bottom: 40px;
+	padding-top: 4px;
+	padding-bottom: 4px;
 	-webkit-background-size: cover;
 	-moz-background-size: cover;
 	-o-background-size: cover;
@@ -11,6 +11,7 @@ body {
 	text-shadow: .06em .06em rgba(0,0,0,.2);
 }
 .jumbo {
+	text-align: center;
 	color: #fff;
 	text-shadow: .016em .016em rgba(0,0,0,.2) !important;
 }
@@ -52,6 +53,11 @@ body {
 	border-top-left-radius: 0;
 	border-top-right-radius: 0;
 }
+.about-button {
+	width: 49%;
+	margin-top: 4px;
+	display: inline;
+}
 .welcome-message {
 	padding: 15px;
 }
@@ -61,11 +67,49 @@ body {
 .dashboard-panel>div {
 	border-radius: 2px;
 	box-sizing: border-box;
-	padding: 40px;
+	padding: 14px;
 	background-color: #eee;
 }
 .container.dashboard  {
 	margin-top: 16px;
+}
+div.dashboard table{
+	margin-bottom: 0;
+}
+.btn-select {
+	line-height: 0.8;
+}
+.dashboard-panel:nth-of-type(1) h2{
+    display: inline;
+}
+.dashboard-panel h2 {
+	margin-top: 2px;
+	margin-bottom: 4px;
+}
+.dashboard-panel:nth-of-type(1) select{
+    float: right;
+}
+.well.well-sm p {
+	margin: 0;
+}
+.activity-item.well {
+	margin-bottom:3px;
+}
+.player-settings .player-name {
+	display: inline-block;
+	width: 74%;
+}
+.player-settings .player-name>p {
+	text-align: center;
+}
+.player-settings .image-wrap {
+	width: 46px;
+	height: 60px;
+	display: inline-block;
+}
+.player-row p,
+.player-row button {
+	display: inline;
 }
 input.loading {
 	background-image: url(loading.gif);
@@ -94,4 +138,35 @@ input.rejected {
 	body {
 		background: url(stadium_s.jpg) no-repeat center center fixed; 
 	}
+}
+
+/*  removed from bootstrap 3.0    */
+
+/*table .btn {
+	background-color: #393939;
+	border-color: #262626 #262626 #000;
+	border-color: rgba(0,0,0,.1) rgba(0,0,0,.1) rgba(0,0,0,.25);
+	filter: progid:DXImageTransform.Microsoft.gradient(enabled=false);
+	text-shadow: 0 -1px 0 rgba(0,0,0,.25);
+	color: #fff;
+}*/
+
+
+/*   dark style    */
+p, h2, td, th, label {
+color: white;
+}
+.dashboard-panel>div {
+background-color: rgba(10, 12, 11, 0.53);
+}
+.panel-collapse{
+background-color: rgba(10, 12, 11, 0.53);	
+}
+.position-success {
+	background-color: rgba(79, 194, 88, 0.43);
+	border-color: #d6e9c6;
+}
+.position-danger {
+	background-color: #E46E6E;
+	border-color: #eed3d7;
 }
