@@ -4,7 +4,8 @@ var oauth =         require('./oauthtest'),
     xpath =         require('xpath'), 
     dom =           require('xmldom').DOMParser,
     obj =           require('./objects'),
-    async =         require('async');
+    async =         require('async'),
+    u =             require('underscore');
 
 
 var apiUrls = {
@@ -167,4 +168,51 @@ module.exports.setupTeams = function (user_object,token,secret,cb){
             })
         }
     });
+}
+function updateRoster(user_object,team_key,token,secret,cb){
+    var url = apiUrls.rosterA+team_key+apiUrls.rosterB
+    oauth.getYahoo(url,token,secret,function(err,result){
+        if (err) {
+            db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
+        } else {
+            var sample = {
+                _id: new objectid(),
+                url:url,
+                resource: "roster",
+                called_for_user: user_object.name,
+                response: result
+            }
+            db.sampleResponses(sample);
+
+            var upToDateRoster = [];
+
+            var doc = new dom().parseFromString(result);
+            var players = xpath.select('//player',doc);
+            async.each(players,function(player,b){
+                console.log(xpath.select('selected_position/position/text()',player).toString());
+                upToDateRoster.push(new obj.player({
+                    id: new objectid(),
+                    player_key:     xpath.select('player_key/text()',player).toString(),
+                    full:           xpath.select('name/full/text()',player).toString(),
+                    first:          xpath.select('name/first/text()',player).toString(),
+                    last:           xpath.select('name/last/text()',player).toString(),
+                    position:       xpath.select('eligible_positions/position/text()',player).toString(),
+                    selected_position: xpath.select('selected_position/position/text()',player).toString(),
+                    injury_status: 'unknown',
+                    bye_week:       xpath.select('bye_weeks/week/text()',player).toString(),
+                    undroppable:    xpath.select('is_undroppable/text()',player).toString(),
+                    image_url:      xpath.select('image_url/text()',player).toString()
+                }))
+                b(null);
+            },
+            function(err){
+                if (err){
+                    cb()
+                } else {
+                    db.addToTeams(newTeam);
+                    cb()
+                }
+            })
+        }
+    }) 
 }

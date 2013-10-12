@@ -72,6 +72,7 @@ function getUserData(req,res,data){
             } else {
                 var return_object = {};
                 var userId;
+                var user_object;
                 async.series([
                 function(callback){
                     db.getFromUserDb(data.uname,function(err,dbdata){
@@ -81,6 +82,7 @@ function getUserData(req,res,data){
                             return_object.name = dbdata.name;
                             return_object.email = dbdata.email;
                             userId = dbdata._id
+                            user_object = dbdata;
                             callback(null);
                         }
                     })
@@ -477,7 +479,14 @@ function handler(req,res){
             db.checkValue(req,res,data);
         });
         return
-    } else {
+    } else if (p == '/method/test'){
+        slackr_utils.ajaxBodyParser(req,function(data){
+            res.writeHead(200);
+            res.end(JSON.stringify(data))
+        })
+        
+        return
+    }else {
         serveStatic.serveStatic(req,res);
         return;
     }
