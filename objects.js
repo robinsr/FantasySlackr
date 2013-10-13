@@ -1,6 +1,6 @@
 var async = require('async');
 
-function team(obj){
+module.exports.team = function (obj){
 	_id = obj.id
 	this.owner = obj.owner;
 	this.team_key = obj.team_key;
@@ -25,41 +25,7 @@ function team(obj){
 	this.roster = [];
 }
 
-team.prototype = {
-	hasPlayer : function(player,cb){
-		async.detect(this.roster,function(item,callback){
-			this.roster.forEach(function(rosterMember){
-				if (roster.Member.yahoo_player_id == item.yahoo_player_id){
-					callback(true)
-				} else {
-					callback(false)
-				}
-			});
-		},cb(result));
-	}
-}
 
-module.exports.team = team;
-
-module.exports.player = function(obj){
-	_id = obj.id;
-	this.player_key = obj.player_key;
-	this.player_full_name = obj.full;
-	this.player_first = obj.first;
-	this.player_last = obj.last;
-	this.position = obj.position;
-	this.selected_position = obj.selected_position;
-	this.injury_status = obj.injury_status;
-	this.bye_week = obj.bye_week;
-	this.undroppable = obj.undroppable;
-	this.image_url = obj.image_url;
-	this.projected_points = {};
-	this.settings = {
-		never_drop: false,
-		start_if_probable: true,
-		start_if_questionable: false
-	};
-}
 
 module.exports.league = function(obj){
 	this._id = obj.id;
@@ -67,3 +33,19 @@ module.exports.league = function(obj){
 	this.name = obj.name;
 	this.url = obj.url;
 }
+
+module.exports.activity = function(obj){
+	this.owner = obj.owner;
+	this.name = obj.name;
+	this.date = new Date();
+	this.type = obj.type;
+	this.message = obj.message;
+}
+
+
+
+/*
+ *
+ *
+ *
+ */

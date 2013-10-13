@@ -13,11 +13,11 @@ var processedRequestChannel = 'finished-yahoo-request';
 
 /*
  * Object representing individual job to be queued and processed
- * @param opt: object. REQUIRED. type (string), message (string), priority (string);
+ * @param opt: object. REQUIRED. type (string), message (string), priority (string), player(object), url(string), xml(string);
  * @param uo: object. REQUIRED. User object
  *
  */
-var Job = function(opt,uo){
+var Job = function(opt){
 	var self = this;
 
 	self.created_on = new Date();
@@ -26,6 +26,10 @@ var Job = function(opt,uo){
 	self.action = opt.action;
 	self.message = opt.message;
 	self.priority = opt.priority;
+	self.player = opt.player;
+	self.url = opt.url;
+	self.xml = opt.xml;
+
 
 	self.status;
 	if (opt.status){
@@ -37,8 +41,8 @@ var Job = function(opt,uo){
 	self.owner;
 	if (opt.owner){
 		self.owner = opt.owner
-	} else if (uo){
-		self.owner - uo._id;
+	} else if (opt.player.owner){
+		self.owner = opt.player.owner._id;
 	} else {
 		new appErr.game("Job object has no owner");
 	}
@@ -59,6 +63,7 @@ var Job = function(opt,uo){
  */
 
 Job.prototype.init = function(next){
+	console.log(this)
 	db.queue.insert(this,function(err){
 		if (err){
 			next(new appErr.database('Insertion error'))

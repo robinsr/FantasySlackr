@@ -5,27 +5,38 @@ var redis = require('redis'),
 	db = require("mongojs").connect(databaseUrl, collections),
 	utils = require('util'),
 	async = require('async'),
-	appErr = require('../util/applicationErrors');
+	appErr = require('../util/applicationErrors'),
+	currentWeek = require('../util/currentWeek').week(),
+	Job = require('./job'),
+	jsonxml = require('jsontoxml');
 
 var publishChannel = 'new-yahoo-request';
 
 function Player (obj){
+	var self = this;
 	_id = obj.id;
-	this.player_key = obj.player_key;
-	this.player_full_name = obj.full;
-	this.player_first = obj.first;
-	this.player_last = obj.last;
-	this.position = obj.position;
-	this.selected_position = obj.selected_position;
-	this.injury_status = obj.injury_status;
-	this.bye_week = obj.bye_week;
-	this.undroppable = obj.undroppable;
-	this.image_url = obj.image_url;
-	this.projected_points = {};
-	this.settings = {
-		never_drop: false,
-		start_if_probable: true,
-		start_if_questionable: false
+	self.player_key = obj.player_key;
+	self.player_full_name = obj.player_full_name;
+	self.player_first = obj.player_first;
+	self.player_last = obj.player_last;
+	self.position = obj.position;
+	self.selected_position = obj.selected_position;
+	self.injury_status = obj.injury_status;
+	self.bye_week = obj.bye_week;
+	self.undroppable = obj.undroppable;
+	self.image_url = obj.image_url;
+	self.owner = obj.owner;
+	self.team_key = obj.team_key;
+
+	self.settings = {};
+	if (obj.settings) {
+		self.settings.never_drop = obj.settings.never_drop;
+		self.settings.start_if_probable = obj.settings.start_if_probable;
+		self.settings.start_if_questionable = obj.settings.start_if_questionable;
+	} else {
+		self.settings.never_drop = false;
+		self.settings.start_if_probable = true;
+		self.settings.start_if_questionable = false;
 	};
 }
 
@@ -45,8 +56,43 @@ Player.prototype.save = function(userObject){
  *
  */
 
-Player.prototype.moveToBench = function(replacementPlayerKey){
+Player.prototype.moveToBench = function(replacementPlayerKey,next){
+	console.log('moving '+this.player_full_name+" to bench")
+	var self = this;
+	var xmlPlayer = function(pk){
+		var player = {};
+		if (!pk){
+			player.player_key = self.player_key;
+			player.position = "BE";
+		} else {
+			player.player_key = pk;
+			player.position = self.position;
+		}
+		return player;
+	}
 
+	var fantasy_content = {};
+	fantasy_content.roster = {};
+	fantasy_content.roster.coverage_type = "week";
+	fantasy_content.roster.week = "13";
+	fantasy_content.roster.players = [];
+	fantasy_content.roster.players.push(new xmlPlayer());
+	fantasy_content.roster.players.push(new xmlPlayer(replacementPlayerKey));
+
+
+	var job = new Job.Job({
+		type: "Lineup Change",
+		action: "bench",
+		message: "moving "+self.player_full_name+" to bench",
+		priority: "normal",
+		player: self,
+		url: "http://fantasysports.yahooapis.com/fantasy/v2/team/"+self.team_key+"/roster",
+		xml: jsonxml(fantasy_content, {xmlHeader:true})
+	}).init(function(err){
+		next(err);
+	});
+	
+	
 }
 
 /*
@@ -83,5 +129,13 @@ Player.prototype.getFreeAgentReplacement = function(replacementPlayerKey){
 Player.prototype.getWaiverReplacement = function(replacementPlayerKey){
 	
 }
+
+Player.prototype.isBye = function() {
+	if (this.bye_week == currentWeek){
+		return true
+	} else {
+		return false
+	}
+};
 
 module.exports.Player = Player;
