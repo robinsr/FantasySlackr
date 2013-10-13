@@ -2,10 +2,11 @@ var redis = require('redis'),
 	subClient = redis.createClient(),
 	pubClient = redis.createClient(),
 	databaseUrl = "fantasyslackr",
-	collections = ["users", "players", "teams", "metadata", "leagues", "activity"],
+	collections = ["users", "players", "teams", "metadata", "leagues", "activity", "queue"],
 	db = require("mongojs").connect(databaseUrl, collections),
 	utils = require('util'),
-	events = require('events');
+	events = require('events'),
+	Job = require('../objects/job');
 
 var subscribeChannel = 'new-yahoo-request';
 var publishChannel = 'finished-yahoo-request';
@@ -30,25 +31,22 @@ stateEmitter.on('idle',function(){
 
 function processRequests(){
 	if (state == 'active'){
-		setTimeout(function(){
-		db.activity.findOne({status: "requested"},function(err,result){
+		db.queue.findOne({status: "unprocessed"},function(err,result){
 			if (err){
 				console.log('db find error - requestModule')
 			}
 			if (!result) {
 				stateEmitter.emit('idle')
 			} else {
-				db.activity.update(result,{status: 'request processed'},function(err){
-					if (err){
-						console.log('db update error - requestModule')
-					}
-					console.log('processed')
-					pubClient.publish(publishChannel, 'new request processed')
+				var job = new Job.Job(result);
+
+				// logic for routing and completing job
+
+				job.markAsProcessed(function(){
+					processRequests();
 				});
-				processRequests();
 			}
 		})
-		},1200)
 	} else {
 		console.log('requestModule finished all entries')
 	}
