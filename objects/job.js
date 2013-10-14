@@ -6,6 +6,7 @@ var redis = require('redis'),
 	objectId = require('mongodb').ObjectID,
 	utils = require('util'),
 	async = require('async'),
+	yahoo = require('./yahooRequest')
 	appErr = require('../util/applicationErrors');
 
 var newRequestChannel = 'new-yahoo-request';
@@ -141,5 +142,21 @@ Job.prototype.destroy = function(next){
 		}
 	})
 }
+
+
+/**
+ * Initiates sending the yahoo request associated with this job
+ * @param  {[type]} ???
+ * @return {[type]}
+ */
+Job.prototype.send = function(next) {
+	var yahooRequest = new yahoo.YahooRequest({
+		// stuff here
+	});
+
+	yahooRequest.send(function(err){
+		next(err);
+	});
+};
 
 module.exports.Job = Job;
