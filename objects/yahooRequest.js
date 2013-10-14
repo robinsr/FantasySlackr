@@ -1,3 +1,5 @@
+var oauth = require('./oauth')
+
 var yahooRequest = function(obj){
 	var self = this;
 
@@ -12,8 +14,12 @@ var yahooRequest = function(obj){
  */
 
 yahooRequest.prototype.send = function(next) {
-	// hmmmmm... something here
-	// next(err,response);
+	var oauthRequest = oauth.Oauth({
+		// options
+	});
+	oauthRequest.send(function(err){
+		next(err);
+	})
 };
 
 /*
