@@ -3,6 +3,7 @@ var redis = require('redis'),
 	databaseUrl = "fantasyslackr",
 	collections = ["users", "players", "teams", "metadata", "leagues", "activity", "queue"],
 	db = require("mongojs").connect(databaseUrl, collections),
+	objectId = require('mongodb').ObjectID,
 	utils = require('util'),
 	async = require('async'),
 	appErr = require('../util/applicationErrors'),
@@ -14,7 +15,7 @@ var publishChannel = 'new-yahoo-request';
 
 function Player (obj){
 	var self = this;
-	_id = obj.id;
+	
 	self.player_key = obj.player_key;
 	self.player_full_name = obj.player_full_name;
 	self.player_first = obj.player_first;
@@ -27,6 +28,13 @@ function Player (obj){
 	self.image_url = obj.image_url;
 	self.owner = obj.owner;
 	self.team_key = obj.team_key;
+
+	self._id;
+	if (obj.id){
+		self._id = obj.id;
+	} else {
+		self._id = new objectId();
+	}
 
 	self.settings = {};
 	if (obj.settings) {
