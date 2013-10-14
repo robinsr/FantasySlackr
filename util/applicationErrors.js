@@ -19,7 +19,23 @@ var GameError = function (msg) {
 util.inherits(GameError, AbstractError)
 GameError.prototype.name = 'Game Logic Error'
 
+var OauthError = function (msg) {
+	// appMonitor.sendMessage('error','oa module errored at getToken (line 58) '+utils.inspect(error));
+	// appMonitor.sendMessage('error','oa module errored at getToken (line 80) '+utils.inspect(error));
+	OauthError.super_.call(this, msg, this.constructor)
+}
+util.inherits(OauthError, AbstractError)
+OauthError.prototype.name = 'Oauth Error'
+
+var UserError = function (msg) {
+	UserError.super_.call(this, msg, this.constructor)
+}
+util.inherits(UserError, AbstractError)
+UserError.prototype.name = 'User Error'
+
 module.exports = {
 	database: DatabaseError,
-	game: GameError
+	game: GameError,
+	oauth: OauthError,
+	user: UserError
 }
