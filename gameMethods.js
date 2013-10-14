@@ -1,4 +1,4 @@
-var oauth =         require('./oauthtest'),
+var oauth =         require('./oauth'),
     db =            require('./dbModule'),
     objectid =      require('mongodb').ObjectID,
     xpath =         require('xpath'), 
@@ -199,7 +199,7 @@ function updateRoster(user_object,team_key,token,secret,cb){
                     position:       xpath.select('eligible_positions/position/text()',player).toString(),
                     selected_position: xpath.select('selected_position/position/text()',player).toString(),
                     injury_status: 'unknown',
-                    bye_week:       xpath.select('bye_weeks/week/text()',player).toString(),
+                    bye_week:       parseInt(xpath.select('bye_weeks/week/text()',player).toString()),
                     undroppable:    xpath.select('is_undroppable/text()',player).toString(),
                     image_url:      xpath.select('image_url/text()',player).toString()
                 }))

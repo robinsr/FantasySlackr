@@ -10,7 +10,7 @@ var http = require('http'),
     db = require('./dbModule');
 
 
-	// separte server hosts oauth consumerKey and consumerSecret. only accessable locally
+  // separte server hosts oauth consumerKey and consumerSecret. only accessable locally
 var consumerKey,consumerSecret,oa,oa2;
 (function(){
     var response = '';

@@ -6,7 +6,7 @@ var redis = require('redis'),
 	utils = require('util'),
 	async = require('async'),
 	appErr = require('../util/applicationErrors'),
-	Player = require('../objects/player'),
+	Player = require('../objects/player');
 
 var publishChannel = 'new-yahoo-request';
 

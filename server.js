@@ -7,7 +7,7 @@ var http =          require('http'),
     utils =         require('util'),
     serveStatic =   require('./serveStatic'),
     slackr_utils =  require('./slackr_utils'),
-    oauth =         require('./oauthtest'),
+    oauth =         require('./oauth'),
     appMonitor =    require('./appMonitor'),
     db =            require('./dbModule'),
     objectid =      require('mongodb').ObjectID,
@@ -16,7 +16,9 @@ var http =          require('http'),
     obj =           require('./objects'),
     async =         require('async'),
     game =          require('./gameMethods'),
-    app =           http.createServer(handler);
+    app =           http.createServer(handler),
+    u =             require('./objects/user');
+
 
 function testLeague(req,res,userdata){
     validateUser(userdata.uname,function(err,user_object,token,secret){
@@ -231,7 +233,7 @@ function logout(req,res,data) {
 }
 
     // creates user in database and begins oauth process, sends link to yahoo auth page if successful
-function createUser(req, res, userdata) {
+function createUserOld(req, res, userdata) {
 
     checkdata(req,res,["uname","upass","uemail"],userdata,function(){
         var hash_salt = slackr_utils.requestHashAsync(32);
@@ -283,6 +285,22 @@ function createUser(req, res, userdata) {
     });
 }
 
+function createUser(req, res, userdata) {
+    checkdata(req,res,["uname","upass","uemail"],userdata,function(){
+        var user = new u.User(userdata);
+        user.create(userdata,function(err){
+            if (err){
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:err.message}));
+            } else {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:'Database Error'}));
+            }
+        })
+
+    });
+}
+
 function checkdata(req,res,expectedData,actualdata,cb){
     var checked = [];
     expectedData.forEach(function(piece){
@@ -297,28 +315,6 @@ function checkdata(req,res,expectedData,actualdata,cb){
             }
         }
     });
-}
-function checkUsersTokenExp(user_object,cb){
-    var token = user_object.access_token,
-    token_ex = user_object.access_token_expires,
-    secret = user_object.access_token_secret,
-    handle = user_object.session_handle,
-    handle_ex = user_object.session_handle_expires,
-    now = new Date().getTime();
-
-    if ((typeof token_ex == 'undefined') || (now > token_ex)){
-        console.log('getting new access token. typeof is '+typeof token_ex+' , now is '+now+' , token ex is '+token_ex);
-        oauth.refreshToken(token,secret,handle,function(err,newtoken,newsecret,result){
-            if (err) {
-                cb(1);
-            } else {
-                storeAccessResult(user_object.name,newtoken,newsecret,result);
-                cb(null,newtoken,newsecret,result);
-            }
-        });
-    } else {
-        cb(null,token,secret);
-    }
 }
 
 function login(req,res,userdata){
