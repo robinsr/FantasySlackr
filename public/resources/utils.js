@@ -22,40 +22,34 @@ $(function(){
 
 // ===========  Utils module =============
 var utils = (function(){
+    var username,session;
+    var credentials = function(){
+        return {uname:username,session:session};
+    }
     return {
         // issues all ajax calls to server
-        issue : function (command, Json, cb) {
+        issue : function (method, command, Json, cb) {
+            var postdata;
+            Json ? postdata = JSON.stringify($.extend(Json, credentials())) : postdata = JSON.stringify(credentials());
             console.log('issueing')
             var url = command;
-            if (Json == null){
-            // request is a get
-                var error = null;
-                $.ajax({
-                    url: url,
-                    type: 'GET',
-                    error: function(dat){
-                        error == true
-                    },
-                    complete: function(dat){
-                        cb(null,dat.status,dat.responseText);
-                        return
-                    }
-                });
-            } else {
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(Json),
-                    error: function(dat){
-                        error == true;
-                    },
-                    complete: function(dat){
-                        cb(null,dat.status,dat.responseText);
-                    return
-                    }
-                }); 
-            }   
+            var error = false;
+            $.ajax({
+                url: url,
+                type: method,
+                contentType: 'application/json',
+                data: postdata,
+                error: function(dat){
+                    error == true;
+                },
+                complete: function(dat){
+                    cb(error,dat.status,dat.responseText);
+                return
+                }
+            }); 
+        },
+        setCredentials : function(name,sess){
+            username = name;session = sess
         }
     }
 })();

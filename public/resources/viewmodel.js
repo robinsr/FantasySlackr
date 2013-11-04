@@ -23,21 +23,33 @@ function team(obj){
 }
 
 function player(obj){
+	var self = this;
 	_id = obj.id;
-	this.team_key = obj.team_key;
-	this.team_name = obj.team_name;
-	this.player_key = obj.player_key;
-	this.player_full_name = obj.player_full_name;
-	this.player_first = obj.player_first;
-	this.player_last = obj.player_last;
-	this.position = obj.position;
-	this.selected_position = ko.observable(obj.selected_position);
-	this.injury_status = obj.injury_status;
-	this.bye_week = obj.bye_week;
-	this.undroppable = obj.undroppable;
-	this.image_url = obj.image_url;
-	this.projected_points = {};
-	this.settings = {
+	self.team_key = obj.team_key;
+	self.team_name = obj.team_name;
+	self.player_key = obj.player_key;
+	self.player_full_name = obj.player_full_name;
+	self.player_first = obj.player_first;
+	self.player_last = obj.player_last;
+	self.position = obj.position;
+	self.selected_position = ko.observable(obj.selected_position)
+	self.selected_position.subscribe(function(val){
+		console.log('val')
+		utils.issue("PUT", "method/lineup", {
+			player_key: self.player_key,
+			team_key: self.team_key,
+			move_to: val
+		},function(err,stat,text){
+			console.log(err,stat,text)
+		});
+		console.log('player '+self.player_full_name+" was moved to "+val)
+	})
+	self.injury_status = obj.injury_status;
+	self.bye_week = obj.bye_week;
+	self.undroppable = obj.undroppable;
+	self.image_url = obj.image_url;
+	self.projected_points = {};
+	self.settings = {
 		never_drop: ko.observable(obj.settings.never_drop),
 		start_if_probable: ko.observable(obj.settings.start_if_probable),
 		start_if_questionable: ko.observable(obj.settings.start_if_questionable)
@@ -72,6 +84,7 @@ function AppViewModel() {
 	// Laundry list of observables
 	self.modalStatus = ko.observable('none');
 	self.displayPage = ko.observable('login').extend({logChange: "first name"});
+	self.showPanel = ko.observable('player')
 	self.loginName = ko.observable();
 	self.loginPass = ko.observable();
 	
@@ -122,6 +135,9 @@ function AppViewModel() {
 	self.showAbout = function(){
 		self.modalStatus('about');
 	}
+	self.switchPanel = function(data){
+		console.log(data)
+	}
 
 
 	// login/signup controls
@@ -135,14 +151,13 @@ function AppViewModel() {
 			username = self.loginName();
 			password = self.loginPass();
 		}
-		utils.issue("method/login",{
+		utils.issue("POST","method/login",{
 		uname: username,
 		upass: password
 		},function(err,stat,text){
 			if (stat == 200) {
 				var data = JSON.parse(text);
-				user.session = data.session;
-				user.name = username;
+				utils.setCredentials(username,data.session)
 
 				self.loginFeedback('');
 				self.loginName('');
@@ -166,7 +181,7 @@ function AppViewModel() {
 	}
 	self.signup = function(){
 		console.log('runngin');
-		utils.issue("method/createNewUser",{
+		utils.issue("POST","method/createNewUser",{
 			uname: self.signupName(),
 			uemail: self.signupEmail(),
 			upass: self.signupPass()
@@ -189,14 +204,13 @@ function AppViewModel() {
 	self.yahooValidated = function(){
 		setTimeout(function(){
 			console.log(new Date().getTime())
-			utils.issue("method/login",{
+			utils.issue("POST","method/login",{
 				uname: self.signupName(),
 				upass: self.signupPass()
 			},function(err,stat,text){
 				if (stat == 200) {
 					var data = JSON.parse(text);
-					user.session = data.session;
-					user.name = self.signupName();
+					utils.setCredentials(self.signupName(),data.session)
 					self.getUserData();
 					self.modalStatus('');
 				} else if (stat == 400) {
@@ -210,10 +224,7 @@ function AppViewModel() {
 	}
 	
 	self.getUserData = function(){
-		utils.issue("method/getUserData", {
-			uname: user.name,
-			session: user.session
-		},function(err,stat,text){
+		utils.issue("POST","method/getUserData", null ,function(err,stat,text){
 			if (err || stat != 200){
 				modalStatus('server-error')
 			} else {
@@ -261,6 +272,7 @@ function AppViewModel() {
 		self.shake('');
 	}
 	self.selectPlayer = function(data){
+		self.showPanel('player')
 		self.selectedPlayer(data.player_key);
 	}
 

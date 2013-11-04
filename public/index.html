@@ -50,20 +50,20 @@
             <form class="form-signin" data-bind="submit:login">
                 <div data-bind="formShake:shake" data-shakeon="login">
                 <h2 class="form-signin-heading shadow">Login</h2>
-                <input tabindex="0" type="text" class="form-control top-input" data-bind="value: loginName" placeholder="Username" autofocus>
-                <input tabindex="1" type="password" class="form-control bottom-input" data-bind="value: loginPass" placeholder="Password">
+                <input tabindex="1" type="text" class="form-control top-input" data-bind="value: loginName" placeholder="Username" autofocus>
+                <input tabindex="2" type="password" class="form-control bottom-input" data-bind="value: loginPass" placeholder="Password">
                 <!-- ko if: loginFeedback() --> 
                     <p class="text-danger" data-bind="text:loginFeedback"></p>
                 <!-- /ko -->
                 <label class="checkbox shadow">
                 <input type="checkbox" value="remember-me"> Remember me
                 </label>
-                <button tabindex="2" class="btn btn-lg btn-primary btn-block" type="submit">Login &raquo;</button>
-                <button tabindex="3" class="btn btn-lg btn-success btn-block"type="submit" data-bind="click:showSignup" href="#">Sign Up &raquo;</button>
+                <button tabindex="3" class="btn btn-lg btn-primary btn-block" type="submit">Login &raquo;</button>
+                <button tabindex="4" class="btn btn-lg btn-success btn-block"type="submit" data-bind="click:showSignup" href="#">Sign Up &raquo;</button>
                 </div>
                 <div class="about-controls">
-                    <button tabindex="4" type="button" data-bind="click: startDemo" class="about-button btn btn-default">Demo</button>
-                    <button tabindex="5" type="button" data-bind="click: showAbout" class="about-button btn btn-default">About</button>
+                    <button tabindex="5" type="button" data-bind="click: startDemo" class="about-button btn btn-default">Demo</button>
+                    <button tabindex="6" type="button" data-bind="click: showAbout" class="about-button btn btn-default">About</button>
                 </div>
             </form>
         </div>
@@ -91,7 +91,7 @@
                     </tr>
                     </tbody>
                 </table>
-                <table data-bind="if: selectedPlayers().length > 0" class="table table-condensed">
+                <table data-bind="if: selectedPlayers().length > 0" class="table table-condensed roster-table pointer">
                         <thead>
                         <tr>
                             <th>Sel</th>
@@ -105,10 +105,10 @@
                         <tbody data-bind="foreach: selectedPlayers">
                             <tr>
                                 <td><button type="button" class="btn btn-default btn-xs btn-select" data-bind="click:$root.selectPlayer,checkSelPlayer:$root.selectedPlayer">&nbsp;</button></td>
-                                <td data-bind="text: player_full_name"></td>
-                                <td data-bind="text: position"></td>
-                                <td data-bind="text: injury_status"></td>
-                                <td data-bind="text: bye_week"></td>
+                                <td data-bind="click:$root.selectPlayer,text: player_full_name"></td>
+                                <td data-bind="click:$root.selectPlayer,text: position"></td>
+                                <td data-bind="click:$root.selectPlayer,text: injury_status"></td>
+                                <td data-bind="click:$root.selectPlayer,text: bye_week"></td>
                                 <td>
                                     <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Start</button>
                                     <button type="button" class="btn btn-xs" data-bind="startOrBench:$data">Bench</button>
@@ -132,10 +132,10 @@
                       <div class="panel panel-default">
                         <div class="panel-heading">
                           <h4 class="panel-title">
-                            <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseOne">Team Settings</a>
+                            <a class="accordion-toggle pointer" data-bind="switchPanel:'team'">Team Settings</a>
                           </h4>
                         </div>
-                        <div class="panel-collapse collapse" id="collapseOne">
+                        <div class="panel-collapse collapse" data-bind="collapse: showPanel() == 'team'">
                           <div class="panel-body" data-bind="foreach: teams">
                           <!-- ko if: team_key == $root.selectedTeam().team_key -->
                             <div class="control-group">
@@ -206,18 +206,18 @@
                   <div class="panel panel-default">
                     <div class="panel-heading">
                       <h4 class="panel-title">
-                        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">
+                        <a class="accordion-toggle pointer" data-bind="switchPanel:'player'">
                           Player Settings
                         </a>
                       </h4>
                     </div>
-                    <div id="collapseTwo" class="panel-collapse collapse">
+                    <div class="panel-collapse collapse" data-bind="collapse: showPanel() == 'player'">
                       <div class="panel-body">
                         <div data-bind="foreach: players">
                           
                           <div class="player-settings" data-bind="if: player_key == $root.selectedPlayer() && team_key == $root.selectedTeam().team_key">
                             <div class="image-wrap">
-                                <img data-bind="attr:{'src':image_url}">
+                                <img class="player-image" data-bind="attr:{'src':image_url}">
                             </div>
                             <div class="player-name">
                                 <p data-bind="text: player_full_name" class="text-center"></p>

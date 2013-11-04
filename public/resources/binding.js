@@ -92,15 +92,31 @@ ko.bindingHandlers.accordianClick = {
     }
 }
 ko.bindingHandlers.startOrBench = {
-    init: function(element, valueAccessor){
+    init: function(element, valueAccessor,ab,vm,bc){
         var value = valueAccessor();
         $(element).click(function(){
+            var player = vm;
+            var positions = bc.$root.positions();
             var button = $(this).text();
-            if (button == "Start"){
-                value.selected_position(value.position);
-            } else if (button == "Bench") {
-                value.selected_position("BN");
-            }
+
+                // Only move player to start if there is an open spot for that position.
+                // Can always move player to bench
+            $(positions).each(function(obj,ind){
+                if (this.team_key == vm.team_key && this.position == vm.position){
+                    if (button == 'Start'){
+                        if (this.starters() >= parseInt(this.count)){
+                            $(element).addClass("btn-danger");
+                            setTimeout(function(){
+                                $(element).removeClass("btn-danger");
+                            },500)
+                        } else {
+                            value.selected_position(value.position)
+                        }
+                    } else {
+                        value.selected_position("BN");
+                    }
+                }
+            })
         })
     },
     update: function(element, valueAccessor){
@@ -129,7 +145,7 @@ ko.bindingHandlers.positionCountIndicator = {
     }
 }
 ko.bindingHandlers.checkSelPlayer = {
-    init: function(){},
+    init: function(element){},
     update: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext){
         var value = valueAccessor();
         if (bindingContext.$data.player_key == value()){
@@ -154,5 +170,25 @@ ko.bindingHandlers.formatDate = {
         var dateString = months[d.getMonth()] + " " + d.getDate()  + daySuffix(d.getDate()) + ", " + d.getFullYear();
 
         $(element).text(dateString);
+    }
+}
+ko.bindingHandlers.collapse = {
+    update: function(element,valueAccessor){
+        var val = valueAccessor();
+        console.log(val)
+        if (val){
+            $(element).collapse('show')
+        } else {
+            $(element).collapse('hide');
+        }
+    }
+}
+ko.bindingHandlers.switchPanel = {
+    init:function(element,valueAccessor,ab,vm,bc){
+        $(element).click(function(){
+            var val = valueAccessor();
+            vm.showPanel(val);
+        })
+        
     }
 }
