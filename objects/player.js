@@ -9,53 +9,130 @@ var redis = require('redis'),
 	appErr = require('../util/applicationErrors'),
 	currentWeek = require('../util/currentWeek').week(),
 	Job = require('./job'),
-	jsonxml = require('jsontoxml');
+	jsonxml = require('jsontoxml'),
+	parser = require('libxml-to-js'),
+	extend = require('extend'),
+	Oauth = require('./oauth').Oauth,
+	Team = require('./team').Team,
+	User = require('./user').User;
 
 var publishChannel = 'new-yahoo-request';
 
-function Player (obj){
+
+/**
+ * Player Object
+ */
+function Player (opt,next){
 	var self = this;
-	
-	self.player_key = obj.player_key;
-	self.player_full_name = obj.player_full_name;
-	self.player_first = obj.player_first;
-	self.player_last = obj.player_last;
-	self.position = obj.position;
-	self.selected_position = obj.selected_position;
-	self.injury_status = obj.injury_status;
-	self.bye_week = obj.bye_week;
-	self.undroppable = obj.undroppable;
-	self.image_url = obj.image_url;
-	self.owner = obj.owner;
-	self.team_key = obj.team_key;
 
-	self._id;
-	if (obj.id){
-		self._id = obj.id;
-	} else {
-		self._id = new objectId();
+	if (opt.team_key && opt.player_key){
+		self.team_key = opt.team_key;
+		self.player_key = opt.player_key;
+		self.findByKeys(function(args){
+			if (args.err) arguments.err = args.err;
+			next.call(self,arguments);
+		})
 	}
-
-	self.settings = {};
-	if (obj.settings) {
-		self.settings.never_drop = obj.settings.never_drop;
-		self.settings.start_if_probable = obj.settings.start_if_probable;
-		self.settings.start_if_questionable = obj.settings.start_if_questionable;
-	} else {
-		self.settings.never_drop = false;
-		self.settings.start_if_probable = true;
-		self.settings.start_if_questionable = false;
-	};
 }
+
+Player.prototype.findByKeys = function(next) {
+	var self = this;
+	db.players.findOne({player_key: self.player_key, team_key: self.team_key},function(err,result){
+		if (err){
+			arguments.err = err;
+			next.call(self,arguments)
+		} else if (!result) {
+			self.getLatestXml(function(args){
+				if (args.err) arguments.err = args.err;
+				next.call(self,arguments)
+			})
+		} else {
+			extend(self,result)
+			next.call(self,arguments);
+		}
+	})
+}
+
+Player.prototype.findById = function(next) {
+	var self = this;
+	db.players.findOne({_id: self._id},function(err,result){
+		if (err || !result){
+			if (err) arguments.err = err;
+			next.call(self,arguments)
+		} else {
+			extend(self,result)
+			next.call(self,arguments);
+		}
+	})
+}
+/**
+ * Retrieves latest XML data for a this player from the player resource
+ * Does not get current position (start/bench). Must use roster context for that
+ * @param  {Function} next Callback
+ */
+Player.prototype.getLatestXml = function(next) {
+	var self = this
+	var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/player/%s/stats", self.player_key);
+	new Team({team_key: self.team_key},function(args){
+		if (!args.err){
+			var team = this;
+			new User({_id: team.owner},function(args){
+				if (!args.err){
+					var user = this;
+					new Oauth(user,function(args){
+						if (!args.err){
+							this.get(requestUrl,function(err,response){
+								if (!err){
+									parser(response,function(err,newData){
+										if (!err){
+											console.log('Success: Fetched new data')
+											newData.player.retrieved = new Date().getTime();
+											extend(self,newData.player);
+											self.save(function(args){
+												next.call(self,arguments);
+											})
+										} else {
+											arguments.err = err;
+											next.call(self,arguments);
+										}
+									})
+								} else {
+									arguments.err = err;
+									next.call(self,arguments);
+								}
+							})
+						} else {
+							arguments.err = args.err;
+							next.call(self,arguments)
+						}
+					})
+				} else {
+					arguments.err = args.err;
+					next.call(self,arguments)
+				}
+			})
+		} else {
+			arguments.err = args.err;
+			next.call(self,arguments)
+		}
+	})
+};
 
 /*
  * Saves the player to the user's record
  *
  */
-
-Player.prototype.save = function(userObject){
-	
-}
+Player.prototype.save = function(next) {
+	var self = this;
+	db.players.save(self,function(err){
+		if (err){
+			arguments.err = new appErr.user("Error saving player in database");
+			next.call(self,arguments)
+		} else {
+			next.call(self,arguments)
+		}
+	})	
+};
 
 /*
  * Moves the player to bench by creating a job and emitting a "new-yahoo-request" event.
@@ -67,40 +144,57 @@ Player.prototype.save = function(userObject){
 Player.prototype.moveToBench = function(replacementPlayerKey,next){
 	console.log('moving '+this.player_full_name+" to bench")
 	var self = this;
-	var xmlPlayer = function(pk){
-		var player = {};
-		if (!pk){
-			player.player_key = self.player_key;
-			player.position = "BE";
-		} else {
-			player.player_key = pk;
-			player.position = self.position;
+
+	var requestXML;
+	var requestURL = "http://fantasysports.yahooapis.com/fantasy/v2/team/"+self.team_key+"/roster";
+
+	async.series([
+		// step 1 formualte the request XML
+		function(cb){
+			var xmlPlayer = function(pk){
+				var player = {};
+				if (!pk){
+					player.player_key = self.player_key;
+					player.position = "BE";
+				} else {
+					player.player_key = pk;
+					player.position = self.position;
+				}
+				return player;
+			}
+
+			var fantasy_content = {};
+			fantasy_content.roster = {};
+			fantasy_content.roster.coverage_type = "week";
+			fantasy_content.roster.week = "13";
+			fantasy_content.roster.players = [];
+			fantasy_content.roster.players.push(new xmlPlayer());
+			fantasy_content.roster.players.push(new xmlPlayer(replacementPlayerKey));
+
+			requestXML = jsonxml(fantasy_content, {xmlHeader:true});
+			cb(null)
+		},
+		// step 2 send the oauth request
+		function(cb){
+			var oauth = new Oauth(self);
+			oauth.put(requestURL,requestXML,function(err,response){
+				console.log(err);
+				console.log(response);
+			})
+		},
+		// step 3 profit
+		function(cb){
+			cb(null)
 		}
-		return player;
-	}
-
-	var fantasy_content = {};
-	fantasy_content.roster = {};
-	fantasy_content.roster.coverage_type = "week";
-	fantasy_content.roster.week = "13";
-	fantasy_content.roster.players = [];
-	fantasy_content.roster.players.push(new xmlPlayer());
-	fantasy_content.roster.players.push(new xmlPlayer(replacementPlayerKey));
-
-
-	var job = new Job.Job({
-		type: "Lineup Change",
-		action: "bench",
-		message: "moving "+self.player_full_name+" to bench",
-		priority: "normal",
-		player: self,
-		url: "http://fantasysports.yahooapis.com/fantasy/v2/team/"+self.team_key+"/roster",
-		xml: jsonxml(fantasy_content, {xmlHeader:true})
-	}).init(function(err){
-		next(err);
-	});
-	
-	
+		],function(err){
+			if (err){
+				// handle err
+				next(null)
+			} else {
+				next(null)
+			}
+		}
+	)	
 }
 
 /*
@@ -145,5 +239,18 @@ Player.prototype.isBye = function() {
 		return false
 	}
 };
+
+// function parseXml(xml,next){
+// 	player_key:     xpath.select('player_key/text()',player).toString(),
+//     full:           xpath.select('name/full/text()',player).toString(),
+//     first:          xpath.select('name/first/text()',player).toString(),
+//     last:           xpath.select('name/last/text()',player).toString(),
+//     position:       xpath.select('eligible_positions/position/text()',player).toString(),
+//     selected_position: xpath.select('selected_position/position/text()',player).toString(),
+//     injury_status: 'unknown',
+//     bye_week:       xpath.select('bye_weeks/week/text()',player).toString(),
+//     undroppable:    xpath.select('is_undroppable/text()',player).toString(),
+//     image_url:      xpath.select('image_url/text()',player).toString()
+// }
 
 module.exports.Player = Player;
