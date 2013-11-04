@@ -7,7 +7,7 @@ var http = require('http'),
     appMonitor = require('./appMonitor'),
     utils = require('util'),
     OAuth = require('mashape-oauth').OAuth,
-    db = require('./dbModule');
+    db = require('./util/dbModule');
 
 
   // separte server hosts oauth consumerKey and consumerSecret. only accessable locally
