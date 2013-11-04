@@ -7,9 +7,8 @@ var http =          require('http'),
     utils =         require('util'),
     serveStatic =   require('./serveStatic'),
     slackr_utils =  require('./slackr_utils'),
-    oauth =         require('./oauth'),
     appMonitor =    require('./appMonitor'),
-    db =            require('./dbModule'),
+    db =            require('./util/dbModule'),
     objectid =      require('mongodb').ObjectID,
     xpath =         require('xpath'), 
     dom =           require('xmldom').DOMParser,
@@ -17,367 +16,148 @@ var http =          require('http'),
     async =         require('async'),
     game =          require('./gameMethods'),
     app =           http.createServer(handler),
-    u =             require('./objects/user');
+    User =          require('./objects/user').User;
 
 
-function testLeague(req,res,userdata){
-    validateUser(userdata.uname,function(err,user_object,token,secret){
-        var league = '314.l.214501';
-        game.setupLeague(null,league,token,secret,function(err,result){
-            //console.log(result);
-            res.end();
-        })
-    })
-    
-}
 function respondInsufficient(req,res){
     res.writeHead(400, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({error:"Invalid Session"}));
 }
 
-function validateUser(username,cb){
-    db.getFromUserDb(username,function(err,user_object){
-        if (err){
-            cb("Invalid Request")
-        } else {
-            checkUsersTokenExp(user_object,function(err,token,secret){
-                if (err){
-                    cb("Could Not Verify Token");
-                } else {
-                    cb(null,user_object,token,secret);
-                }
-            });
-        }
-    });
-}
 
-function initialSetup(username){
-    validateUser(username,function(err,obj,tok,sec){
-        if (err){
-            db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
-        } else {
-            game.setupTeams(obj,tok,sec,function(err){
-                if (err){
-                    db.updateUserDb(username,{initial_setup:"unsuccessfull"},function(){});
-                } else {
-                    db.updateUserDb(username,{initial_setup:"complete"},function(){});
-                }
-            })
-        }
-    })
-}
 function getUserData(req,res,data){
-    checkdata(req,res,["uname","session",],data,function(){
-        db.validateSession(data.uname,data.session,function(valid){
-            if (!valid){
-                respondInsufficient(req,res)
-            } else {
-                var return_object = {};
-                var userId;
-                var user_object;
-                async.series([
-                function(callback){
-                    db.getFromUserDb(data.uname,function(err,dbdata){
-                        if (err) {
-                            callback('error')
-                        } else {
-                            return_object.name = dbdata.name;
-                            return_object.email = dbdata.email;
-                            userId = dbdata._id
-                            user_object = dbdata;
-                            callback(null);
-                        }
-                    })
-                },
-                function(callback){
-                    db.getUsersTeams(userId,function(err,teams){
-                        if (err) {
-                            callback('error');
-                        } else {
-                            return_object.teams = [];
-                            return_object.leagues = [];
-                            async.each(teams,function(a,b){
-                                db.getTeam(a.team_key,function(err,team){
-                                    if (err){
-                                        b("error")
-                                    } else {
-                                        delete team.owner;
-                                        console.log(utils.inspect(team));
-                                        db.getLeague(team.league,function(err,league){
-                                            if (err){
-                                                b("error")
-                                            } else {
-                                                console.log(league);
-                                                team.league = league;
-                                                return_object.teams.push(team);
-                                                b(null);
-                                            }
-                                        })
-                                    }
-                                })
-                            },function(err){callback(err)})
-                        }
-                    })
-                },
-                function(callback){
-                    db.getActivity(data.uname,function(err,feed){
-                        if (err) {
-                            callback('error')
-                        } else {
-                            return_object.activity = [];
-                            async.each(feed,function(a,b){
-                                db.getActivityItem(a._id,function(err,item){
-                                    if (err){
-                                        b("error")
-                                    } else {
-                                        return_object.activity.push(item)
-                                        b(null)
-                                    }
-                                })
-                            },function(err){callback(err)})
-                        }
-                    })
-                }
-                ],
-                function(err,result){
-                    if (err){
-                        res.writeHead(500);
-                        res.end(JSON.stringify({error:"Could not retrieve data for user "+data.uname}));
-                    } else {
-                        res.writeHead(200);
-                        res.end(JSON.stringify(return_object));
-                    } 
+    slackr_utils.checkdata(req,res,["uname","session",],data,function(){
+        new User({uname:data.uname},function(){
+            this.validateSession(data.session,
+            function(){
+                respondInsufficient(req,res);
+            },function(){
+                this.stringifyData(function(err,data){
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(data));
                 })
-            }
+            })
         })
     })
 }
 
+function logout(req,res,data) {
+    new User({uname: data.uname},function(args){
+        this.destroySession(function(ars){
+            if (args.err){
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:args.err.message}));
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: "logged out" }));
+            }
+        });
+    });   
+}
 
-    // exchanges req token and tok verifier for access token 
+/*
+ *  ==================                 ==================
+ *  ==================  Oauth Step 1   ==================
+ *  ==================                 ==================
+ *  creates user in database and begins oauth process, sends link to yahoo auth page if successful
+ */ 
+function createUser(req, res, userdata) {
+    slackr_utils.checkdata(req,res,["uname","upass","uemail"],userdata,function(){
+        new User(userdata,function(args){
+            var self = this;
+            if (self.pass != null){
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:"User Account Already Exists"}));
+            } else {
+                self.create(userdata,function(args){
+                    if (args.err){
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({error:args.err.message}));
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ uname: userdata.uname, url: self.xoauth_request_auth_url }));
+                    } 
+                });
+            }
+        });
+    });
+}
+/*
+ *  ==================                 ==================
+ *  ==================  Oauth Step 2   ==================
+ *  ==================                 ==================
+ *  exchanges req token and tok verifier for access token
+ */ 
 function handleApiCallback(req,res){
-    appMonitor.sendMessage('debud','recevied yahoo callback');
     fs.readFile('./resources/closewindow.html',function(err,content){
         res.writeHead(200);
         res.end(content.toString());
     })
     
-    var yahooCb = qs.parse(nodeurl.parse(req.url).query);     
-           
-        // find token_secret in db
-    db.getTemporaryToken(yahooCb.oauth_token,function(err,result){
-        if (err){
-            appMonitor.sendMessage("error","err001, failed to find token in database");
-            db.updateUserDb(storedData.username,{initial_setup:"error"},function(){})
-            return
-        } else {
-            var storedData = JSON.parse(result);
-            // GETS OAUTH ACCESS TOKEN
-            oauth.getAccess(yahooCb.oauth_token,yahooCb.oauth_verifier,storedData.oauth_token_secret,function(err,token,secret,result){
-                if (err){
-                    appMonitor.sendMessage("error","err002, oauth connection problem");
-                    db.updateUserDb(storedData.username,{initial_setup:"error"},function(){})
-                } else {
-                    //  CHECK IF USER WITH GUID EXISTS
-                    db.checkGuid(result.xoauth_yahoo_guid,function(err,guid_result){
-                        if (err){
-                            db.updateUserDb(storedData.username,{initial_setup:"error"},function(){})
-                        } else if (guid_result != null){
-                            db.updateUserDb(storedData.username,{initial_setup:"guid taken"},function(){})
-                        } else {
-                            // STORES OAUTH ACCESS TOKEN
-                            storeAccessResult(storedData.username,token,secret,result);
-                            // AT THIS POINT, PINGING login WOULD RETURN A SESSION, NOT "Unauthorized User"
+    var yahooCb = qs.parse(nodeurl.parse(req.url).query);  
 
-                            // INTIAL SETUP OF TEAMS AND ROSTERS
-                            db.updateUserDb(storedData.username,{initial_setup:"pending"},function(){
-                                initialSetup(storedData.username);
-                            });
-                        }
-                    })        
-                }
-            });                         
-        }
-    });    
-}
-
-function storeAccessResult(username,token,secret,result){
-    var newdata = {
-        access_token: token,
-        access_token_secret: secret,
-        access_token_expires : parseInt(new Date().getTime()) + (parseInt(result.oauth_expires_in) * 1000),
-        session_handle: result.oauth_session_handle,
-        session_handle_expires: parseInt(new Date().getTime()) + (parseInt(result.oauth_authorization_expires_in) * 1000),
-        guid: result.xoauth_yahoo_guid
-    }
-    db.updateUserDb(username,newdata,function(db_err){
-        if (db_err){
-            appMonitor.sendMessage("error","err003, update user failed");
-        } else {
-            appMonitor.sendMessage('success','store access result success')
-        }
-    });
-}
-
-function logout(req,res,data) {
-    db.destroySession(data.uname,function(er){
-        if (er){
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({error:'Error Logging Out'}));
-            return
-        } else {
-            res.writeHead(200);
-            res.end();
-        }
-    });        
-}
-
-    // creates user in database and begins oauth process, sends link to yahoo auth page if successful
-function createUserOld(req, res, userdata) {
-
-    checkdata(req,res,["uname","upass","uemail"],userdata,function(){
-        var hash_salt = slackr_utils.requestHashAsync(32);
-        var hashed_pass_and_salt = crypto.createHash('md5').update(userdata.upass + hash_salt).digest('hex');
-
-        // check if user already exists
-        db.getFromUserDb(userdata.uname, function (err, r){
-            if (err) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({error:'Database Error'}));
-                return
-            } else if (r) {
-                res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({error:'Account already exists for '+userdata.uname}));
-                return
-            } else {
-                oauth.getToken(function(oauth_err,oauth_token,oauth_token_secret,oauth_url){
-                    if (oauth_err != null){
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({error:'Oauth Error'}));
-                        return
-                    } else {
-                        // store request token, token secret, and username for later lookup
-                        db.setTemporaryToken(oauth_token,oauth_token_secret,userdata.uname);
-
-                        // create user object to be stored
-                        var user_setup = {
-                          name: userdata.uname,
-                          email: userdata.uemail,
-                          pass: hashed_pass_and_salt,
-                          salt: hash_salt,
-                        };
-
-                        // store user object
-                        db.addToUserDb(user_setup, function (err) {
-                            if (err) {
-                                res.writeHead(500, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify({error:'Database Error'}));
-                                return
-                            } else {
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify({ uname: userdata.uname, url: oauth_url }));
-                            }
-                        });
-                    }
-                });
-            }
-        });
-    });
-}
-
-function createUser(req, res, userdata) {
-    checkdata(req,res,["uname","upass","uemail"],userdata,function(){
-        var user = new u.User(userdata);
-        user.create(userdata,function(err){
-            if (err){
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({error:err.message}));
-            } else {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({error:'Database Error'}));
-            }
+    new User({request_token: yahooCb.oauth_token},function(args){
+        this.getAccess(function(args){
+            this.setup();
         })
-
-    });
-}
-
-function checkdata(req,res,expectedData,actualdata,cb){
-    var checked = [];
-    expectedData.forEach(function(piece){
-        if (typeof actualdata[piece] == 'undefined'){
-            res.writeHead(400, {'Content-Type':'application/json'});
-            res.end(JSON.stringify({RequestParameterMissing: piece}));
-            return
-        } else {
-            checked.push(piece);
-            if (checked.length == expectedData.length){
-                cb();
-            }
-        }
-    });
+    })
 }
 
 function login(req,res,userdata){
-    checkdata(req,res,["uname","upass"],userdata,function(){
-
-        db.getFromUserDb(userdata.uname,function(err,user_object){
-
-            
-
-            if (err) {
+    slackr_utils.checkdata(req,res,["uname","upass"],userdata,function(){
+        new User(userdata,function(args){
+            console.log(this);
+            if (args.err) {
                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({error:'Database Error'}));
+                res.end(JSON.stringify({error:args.err.message}));
                 return
-            } else if (user_object == null) {
+            } else if (this.pass == null) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'No User Account Found'}));
                 return
-            } else if (user_object.pass != crypto.createHash('md5').update(userdata.upass + user_object.salt).digest('hex')) {
+            } else if (this.pass != crypto.createHash('md5').update(userdata.upass + this.salt).digest('hex')) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'Invalid Password'}));
                 return
-            } else if (typeof user_object.initial_setup == 'undefined'){
+            } else if (typeof this.initial_setup == 'undefined'){
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'Error Creating Account'}));
                 return
-            } else if (user_object.initial_setup == 'guid taken'){
+            } else if (this.initial_setup == 'guid taken'){
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'Yahoo ID already in use'}));
                 return
-            } else if (user_object.initial_setup == 'error'){
+            } else if (this.initial_setup == 'error'){
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.strin5ify({error:'Error Fetching Users Yahoo data'}));
                 return
-            } else if (typeof user_object.access_token == 'undefined'){
+            } else if (typeof this.access_token == 'undefined'){
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({error:'Unauthenticated User'}));
                 return
             } else {
-                checkUsersTokenExp(user_object,function(err,token,secret,result){
-                    if (err){
+                this.refreshToken(function(args){
+                    if (args.err) {
                         res.writeHead(500, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({error: 'Could Not Refresh Token'}));
                         return
                     } else {
-                        db.createSession(user_object.name,token,secret,function(err,hash){
-                            if (err) {
+                        this.makeSession(function(args){
+                            if (args.err) {
                                 res.writeHead(500, { 'Content-Type': 'application/json' });
                                 res.end(JSON.stringify({error: 'could not create session'}));
                                 return
                             } else {
                                 res.writeHead(200, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify({session:hash}));
+                                res.end(JSON.stringify({session:args.hash}));
                                 return
                             }
                         });
-                        if (result){
-                            storeAccessResult(user_object.name,token,secret,result);
-                        }
                     }
                 });
             }
         });
-});
+    });
 }
 function respondOk(req,res,data){
     var ret = {
