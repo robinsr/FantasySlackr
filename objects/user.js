@@ -42,6 +42,12 @@ var User = function(opt,next){
 			if (args.err) arguments.err = args.err;
 			next.call(self,arguments)
 		})
+	} else if (opt._id){
+		self._id = new objectId.createFromHexString(opt._id.toString().trim());
+		self.findById(function(args){
+			if (args.err) arguments.err = args.err;
+			next.call(self,arguments)
+		})
 	} else {
 		next.call(self,arguments)
 	}
@@ -55,6 +61,23 @@ var User = function(opt,next){
 User.prototype.findByName = function(next) {
 	var self = this;
 	db.users.findOne({ name: self.name },function(err,result){
+		if (err || !result) {
+			arguments.err = new appErr.user("Could not find user in database")
+			next.call(self,arguments)
+		} else {
+			extend(self,result)
+			next.call(self,arguments)
+		}
+	});
+};
+/**
+ * Fills out user object fields based on result from db querying for id
+ * @param  {Function} next     	Callback
+ * @return {[type]}            [description]
+ */
+User.prototype.findById = function(next) {
+	var self = this;
+	db.users.findOne({ _id: self._id },function(err,result){
 		if (err || !result) {
 			arguments.err = new appErr.user("Could not find user in database")
 			next.call(self,arguments)
@@ -90,7 +113,7 @@ User.prototype.save = function(next) {
 	var self = this;
 	db.users.save(self,function(err){
 		if (err){
-			arguments.err = new appErr.user("Error creating user in database");
+			arguments.err = new appErr.user("Error saving user in database");
 			next.call(self,arguments)
 		} else {
 			next.call(self,arguments)
@@ -273,12 +296,10 @@ User.prototype.stringifyData = function(next) {
                             b("error")
                         } else {
                             delete team.owner;
-                            console.log(utils.inspect(team));
                             dbMod.getLeague(team.league,function(err,league){
                                 if (err){
                                     b("error")
                                 } else {
-                                    console.log(league);
                                     team.league = league;
                                     return_object.teams.push(team);
                                     b(null);
