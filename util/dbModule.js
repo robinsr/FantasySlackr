@@ -1,6 +1,6 @@
 var redis = require('redis'),
 	client = redis.createClient(),
-	slackr_utils = require('./slackr_utils'),
+	slackr_utils = require('../slackr_utils'),
 	databaseUrl = "fantasyslackr",
 	collections = ["users", "players", "teams", "metadata", "leagues", "activity"],
 	db = require("mongojs").connect(databaseUrl, collections),
