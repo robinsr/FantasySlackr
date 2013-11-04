@@ -9,10 +9,6 @@ var http =          require('http'),
     slackr_utils =  require('./slackr_utils'),
     appMonitor =    require('./appMonitor'),
     db =            require('./util/dbModule'),
-    objectid =      require('mongodb').ObjectID,
-    xpath =         require('xpath'), 
-    dom =           require('xmldom').DOMParser,
-    obj =           require('./objects'),
     async =         require('async'),
     game =          require('./gameMethods'),
     app =           http.createServer(handler),
@@ -22,37 +18,6 @@ var http =          require('http'),
 function respondInsufficient(req,res){
     res.writeHead(400, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({error:"Invalid Session"}));
-}
-
-
-function getUserData(req,res,data){
-    slackr_utils.checkdata(req,res,["uname","session",],data,function(){
-        new User({uname:data.uname},function(){
-            this.validateSession(data.session,
-            function(){
-                respondInsufficient(req,res);
-            },function(){
-                this.stringifyData(function(err,data){
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify(data));
-                })
-            })
-        })
-    })
-}
-
-function logout(req,res,data) {
-    new User({uname: data.uname},function(args){
-        this.destroySession(function(ars){
-            if (args.err){
-                res.writeHead(500, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({error:args.err.message}));
-            } else {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: "logged out" }));
-            }
-        });
-    });   
 }
 
 /*
@@ -159,6 +124,19 @@ function login(req,res,userdata){
         });
     });
 }
+function logout(req,res,data) {
+    new User({uname: data.uname},function(args){
+        this.destroySession(function(ars){
+            if (args.err){
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({error:args.err.message}));
+            } else {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ message: "logged out" }));
+            }
+        });
+    });   
+}
 function respondOk(req,res,data){
     var ret = {
         success: "Method not implemented yet",
@@ -166,6 +144,21 @@ function respondOk(req,res,data){
     }
     res.writeHead(200, {'Content-Type':'application/json'});
     res.end(JSON.stringify(ret));
+}
+function getUserData(req,res,data){
+    slackr_utils.checkdata(req,res,["uname","session",],data,function(){
+        new User({uname:data.uname},function(){
+            this.validateSession(data.session,
+            function(){
+                respondInsufficient(req,res);
+            },function(){
+                this.stringifyData(function(err,data){
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(data));
+                })
+            })
+        })
+    })
 }
  
     // handles incoming http requests
