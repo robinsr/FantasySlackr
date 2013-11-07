@@ -1,4 +1,6 @@
-var crypto = require('crypto'),
+var redis = require('redis'),
+	client = redis.createClient(),
+	crypto = require('crypto'),
 	slackr_utils =  require('../slackr_utils'),
 	appErr = require('../util/applicationErrors'),
 	databaseUrl = "fantasyslackr",
@@ -9,9 +11,9 @@ var crypto = require('crypto'),
  	utils = require('util'),
  	async = require('async'),
  	extend = require('extend'),
- 	Teams = require('./teams').Teams,
  	dbMod = require('../util/dbModule');
 
+var publishChannel = 'new-setup-request';
 
 /*
 	User constructor
@@ -23,6 +25,7 @@ var User = function(opt,next){
 	self.initial_setup = 'incomplete';
 	self.pass = null;
 	self.salt = null;
+	self.leagues = [];
 
 
 		// if a username is supplied, query db
@@ -221,6 +224,18 @@ User.prototype.refreshToken = function(next) {
 	})
 };
 
+User.prototype.getOauthContext = function(next) {
+	var self = this;
+	new Oauth(self,function(args){
+		if (!args.err){
+			next.call(this,arguments);
+		} else {
+			arguments.err = args.err;
+			next.call(this,arguments);
+		}
+	})
+};
+
 /*
  *  ==================                 ==================
  *  ==================    Sessions     ==================
@@ -252,8 +267,14 @@ User.prototype.destroySession = function(next) {
 	});
 };
 
+/**
+ * Validates a session token
+ * @param  {string} session Session string
+ * @param  {function} failure Failure Callback
+ * @param  {function} success Success Callback
+ */
 User.prototype.validateSession = function(session,failure,success) {
-	if (!this.currentLogin || this.currentLogin != session){
+	if (this.currentLogin && this.currentLogin != session){
 		failure.call(this,arguments)
 	} else {
 		success.call(this,arguments)
@@ -272,71 +293,134 @@ User.prototype.validateSession = function(session,failure,success) {
  * @return {[type]}        [description]
  */
 User.prototype.setup = function(next) {
-	var teamsSetup = new Teams(function(err,teamsSetup){
-		teamsSetup.addOwner(self, function(err,teamsSetup){
-			teamsSetup.get();
-		})
+	var self = this;
+	
+	
+};
+
+User.prototype.getLatestXml = function(next) {
+	var self = this;
+	var requestUrl = 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams';
+
+	self.getOauthContext(function(args){
+		if (!args.err){
+			this.get(requestUrl,function(err,response){
+				if (!err){
+					console.log(response)
+					var keys = response.match(/[0-9]{3}\.l\.[0-9]{6}\.t\.[0-9]{1}/g);
+					var newKeys = [];
+					async.eachSeries(keys,function(key,cb){
+						if (!self.teamKeys || !self.teamKeys.indexOf(key)){
+							newKeys.push(key)
+						}
+						cb()
+					},function(){
+						if (newKeys.length > 0){
+							client.publish(publishChannel,JSON.stringify({
+								user: self._id.toString(),
+								keys: newKeys
+							}));
+						}
+						next.call(self,arguments)
+					})
+				} else {
+					arguments.err = err;
+					next.call(self,arguments)
+				}
+			})
+		} else {
+			arguments.err = args.err;
+			next.call(self,arguments)
+		}
 	})
 };
 
 User.prototype.stringifyData = function(next) {
 	var self = this,
 		return_object = {};
-	async.series([
-    function(callback){
-        dbMod.getUsersTeams(self._id,function(err,teams){
-            if (err) {
-                callback('error');
-            } else {
-                return_object.teams = [];
-                return_object.leagues = [];
-                async.each(teams,function(a,b){
-                    dbMod.getTeam(a.team_key,function(err,team){
-                        if (err){
-                            b("error")
-                        } else {
-                            delete team.owner;
-                            dbMod.getLeague(team.league,function(err,league){
-                                if (err){
-                                    b("error")
-                                } else {
-                                    team.league = league;
-                                    return_object.teams.push(team);
-                                    b(null);
-                                }
-                            })
-                        }
-                    })
-                },function(err){callback(err)})
-            }
-        })
-    },
-    function(callback){
-        dbMod.getActivity(self.name,function(err,feed){
-            if (err) {
-                callback('error')
-            } else {
-                return_object.activity = [];
-                async.each(feed,function(a,b){
-                    dbMod.getActivityItem(a._id,function(err,item){
-                        if (err){
-                            b("error")
-                        } else {
-                            return_object.activity.push(item)
-                            b(null)
-                        }
-                    })
-                },function(err){callback(err)})
-            }
-        })
-    }
-    ],
-    function(err,result){
-        if (err){
-            next('error');
+	self.getLeagues(function(args){
+		if (!args.err){
+			self.getPlayers(function(args){
+				if (!args.err){
+					self.getActivity(function(args){
+						if (!args.err){
+							next(null,{
+								players: self.players,
+								teams: self.teams,
+								leagues: self.leagues,
+								activity: self.activity
+							})
+						} else {
+							next(new appErr.game('Error retrieving user data'))
+						}
+					})
+				} else {
+					next(new appErr.game('Error retrieving user data'))
+				}
+			})
+		} else {
+			next(new appErr.game('Error retrieving user data'))
+		}
+	})
+};
+
+User.prototype.getPlayers = function(next) {
+	var self = this;
+	db.players.find({owner: self._id},function(err,result){
+		if (!err){
+			self.players = result;
+			next.call(self,arguments);
+		} else {
+			if (err) arguments.err = err;
+			next.call(self,arguments);
+		}
+	})
+};
+User.prototype.getLeagues = function(next) {
+	var self = this;
+	self.getTeams(function(args){
+		if (!args.err && this.teams && this.teams.length > 0){
+			async.eachSeries(this.teams,function(team,cb){
+				db.leagues.findOne({league_key: team.league_key},function(err,result){
+					if (err){
+						cb("Database error fetching league: "+team.league);
+					} else {
+						self.leagues.push(result[0]);
+						cb(null);
+					}
+				},function(err){
+					if (err) arguments.err = err;
+					next.call(self,arguments);
+				});
+			})
+		} else {
+			arguments.err = args.err;
+			next.call(self,arguments);
+		}
+	})
+};
+User.prototype.getTeams = function(next) {
+	var self = this;
+	db.teams.find({owner:self._id},function(err,result){
+        if (err) {
+            arguments.err = err;
+            next.call(self,arguments);
         } else {
-            next(null,return_object);
-        } 
+            self.teams = result;
+            next.call(self,arguments);
+        }
+    })
+};
+User.prototype.getActivity = function(next) {
+	var self = this;
+	db.activity.find({name:self.name}).sort({date: -1}).limit(5,function(err,result){
+        if (err) {
+            arguments.err = err;
+            next.call(self,arguments);
+        } else {
+            self.activity = result;
+            next.call(self,arguments);
+        }
     })
 };
 
