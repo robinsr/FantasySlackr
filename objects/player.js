@@ -1,37 +1,37 @@
-var redis = require('redis'),
-	client = redis.createClient(),
-	databaseUrl = "fantasyslackr",
-	collections = ["users", "players", "teams", "metadata", "leagues", "activity", "queue"],
+var databaseUrl = "fantasyslackr",
+	collections = ["players"],
 	db = require("mongojs").connect(databaseUrl, collections),
 	objectId = require('mongodb').ObjectID,
 	utils = require('util'),
 	async = require('async'),
 	appErr = require('../util/applicationErrors'),
 	currentWeek = require('../util/currentWeek').week(),
-	Job = require('./job'),
 	jsonxml = require('jsontoxml'),
 	parser = require('libxml-to-js'),
 	extend = require('extend'),
-	Oauth = require('./oauth').Oauth,
-	Team = require('./team').Team,
 	User = require('./user').User;
-
-var publishChannel = 'new-yahoo-request';
-
 
 /**
  * Player Object
  */
 function Player (opt,next){
 	var self = this;
+	self.settings = {
+		never_drop: true,
+		start_if_probable: true,
+		start_if_questionable: false,
+	};
 
-	if (opt.team_key && opt.player_key){
+	if (opt.team_key && opt.player_key && !opt.retrieved){
 		self.team_key = opt.team_key;
 		self.player_key = opt.player_key;
 		self.findByKeys(function(args){
 			if (args.err) arguments.err = args.err;
 			next.call(self,arguments);
 		})
+	} else if (opt.retrieved){
+		extend(true,self,opt);
+		next.call(self,arguments);
 	}
 }
 
@@ -70,42 +70,91 @@ Player.prototype.findById = function(next) {
  * Does not get current position (start/bench). Must use roster context for that
  * @param  {Function} next Callback
  */
-Player.prototype.getLatestXml = function(next) {
+Player.prototype.getLatestXml = function(next,context) {
 	var self = this
 	var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/player/%s/stats", self.player_key);
-	new Team({team_key: self.team_key},function(args){
+	self.oauthContext(function(args){
 		if (!args.err){
-			var team = this;
-			new User({_id: team.owner},function(args){
-				if (!args.err){
-					var user = this;
-					new Oauth(user,function(args){
-						if (!args.err){
-							this.get(requestUrl,function(err,response){
-								if (!err){
-									parser(response,function(err,newData){
-										if (!err){
-											console.log('Success: Fetched new data')
-											newData.player.retrieved = new Date().getTime();
-											extend(self,newData.player);
-											self.save(function(args){
-												next.call(self,arguments);
-											})
-										} else {
-											arguments.err = err;
-											next.call(self,arguments);
-										}
-									})
-								} else {
-									arguments.err = err;
-									next.call(self,arguments);
-								}
+			this.get(requestUrl,function(err,response){
+				if (!err){
+					parser(response,function(err,newData){
+						if (!err){
+							console.log('Success: Fetched new data')
+							newData.player.retrieved = new Date().getTime();
+							extend(self,newData.player);
+							self.save(function(args){
+								next.call(self,arguments);
 							})
 						} else {
-							arguments.err = args.err;
-							next.call(self,arguments)
+							arguments.err = err;
+							next.call(self,arguments);
 						}
 					})
+				} else {
+					arguments.err = err;
+					next.call(self,arguments);
+				}
+			})
+		} else {
+			arguments.err = args.err;
+			next.call(self,arguments)
+		}
+	})
+};
+/**
+ * Uses the team context to get the latest lineup position for this player
+ * 
+ * @param  {Function} next Callback
+ */
+Player.prototype.getLatestPosition = function(next) {
+	var self = this
+	var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/team/%s/roster/players", self.team_key);
+	self.oauthContext(function(args){
+		if (!args.err){
+			this.get(requestUrl,function(err,response){
+				if (!err){
+					parser(response,function(err,newData){
+						if (!err){
+							console.log('Success: Fetched new data');
+							newData.team.roster.players.player.forEach(function(p){
+								if (p.player_key == self.player_key){
+									self.retrieved = new Date().getTime();
+									extend(true,self, p.selected_position)
+									self.save(function(args){
+										next.call(self,arguments);
+									})
+								}
+							});
+						} else {
+							arguments.err = err;
+							next.call(self,arguments);
+						}
+					})
+				} else {
+					arguments.err = err;
+					next.call(self,arguments);
+				}
+			})
+		} else {
+			arguments.err = args.err;
+			next.call(self,arguments)			
+		}
+	})
+};
+
+/**
+ * Creates an oauth context in which to create requests
+ * Oauth requries a user object as a parameter with the user's token details
+ * @param  {Function} next [description]
+ * @return {[type]}        [description]
+ */
+Player.prototype.oauthContext = function(next) {
+	var self = this;
+	new User({_id: this.owner},function(args){
+		if (!args.err){
+			this.getOauthContext(function(args){
+				if (!args.err){
+					next.call(this,arguments);
 				} else {
 					arguments.err = args.err;
 					next.call(self,arguments)
@@ -117,7 +166,6 @@ Player.prototype.getLatestXml = function(next) {
 		}
 	})
 };
-
 /*
  * Saves the player to the user's record
  *
@@ -175,13 +223,13 @@ Player.prototype.moveToBench = function(replacementPlayerKey,next){
 			cb(null)
 		},
 		// step 2 send the oauth request
-		function(cb){
-			var oauth = new Oauth(self);
-			oauth.put(requestURL,requestXML,function(err,response){
-				console.log(err);
-				console.log(response);
-			})
-		},
+		// function(cb){
+		// 	var oauth = new Oauth(self);
+		// 	oauth.put(requestURL,requestXML,function(err,response){
+		// 		console.log(err);
+		// 		console.log(response);
+		// 	})
+		// },
 		// step 3 profit
 		function(cb){
 			cb(null)
