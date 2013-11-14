@@ -56,7 +56,7 @@ function createUser(req, res, userdata) {
  *  exchanges req token and tok verifier for access token
  */ 
 function handleApiCallback(req,res){
-    fs.readFile('./resources/closewindow.html',function(err,content){
+    fs.readFile('./public/resources/closewindow.html',function(err,content){
         res.writeHead(200);
         res.end(content.toString());
     })
@@ -191,112 +191,57 @@ function getUserData(req,res,data){
  
     // handles incoming http requests
 function handler(req,res){
-    console.log(req.url);
-    
-    req.url = req.url.replace('/dev','');
-    req.url = req.url.replace('/FantasySlackr', '');
-    req.url = req.url.replace('/fantasyslackr', '');
-    var p = nodeurl.parse(req.url).pathname;
-    var p1 = p.split('/')[1];
+console.log("before: "+req.url)   
+    req.url = req.url.replace(/(\/dev|\/fantasyslackr)*/i,'');
+    console.log("after:  "+req.url)
 
-    if (p == '/'){
-        serveStatic.serveStatic(req,res);
-        return;
-    } else if (p == '/apicallback' || p == '/apicallback/'){
+    if (req.url.match(/\/apicallback/)){
         handleApiCallback(req,res);
-        return;
-    } else if (p == '/test'){
-        db.testQuery(function(err){
-            if (err){
-                res.writeHead(400);
-                res.end();
-            } else {
-                res.writeHead(200);
-                res.end();
+    } else if (req.url.match(/\/method\//)){
+        var method = req.url.match(/\/method\/([\w]*)\/?/);
+        slackr_utils.ajaxBodyParser(req, function(data){
+            if (method[1] =='login'){
+                login(req,res,data);
+            } else if (method[1] =='logout'){
+                logout(req,res,data);
+            } else if (method[1] =='createNewUser'){
+                createUser(req,res,data);
+            } else if (method[1] =='getUserData'){
+                getUserData(req,res,data);
+            } else if (method[1] =='dropPlayer'){
+                respondOk(req,res,data);
+            } else if (method[1] =='pickupPlayer'){
+                respondOk(req,res,data);
+            } else if (method[1] =='modifyLineup'){
+                respondOk(req,res,data);
+            } else if (method[1] =='getFreeAgents'){
+                respondOk(req,res,data);
+            } else if (method[1] =='getPlayersOnWaivers'){
+                respondOk(req,res,data);
+            } else if (method[1] =='submitWaiversClaim'){
+                respondOk(req,res,data);
+            } else if (method[1] =='getWaiversClaim'){
+                respondOk(req,res,data);
+            } else if (method[1] =='checkValue'){
+                db.checkValue(req,res,data);
+            } else if (method[1] =='test'){
+                console.log('test method')
             }
-        })
-        return  
-    } else if (p == '/method/login'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            login(req,res,data);
         });
-        return
-    } else if (p == '/method/logout'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            logout(req,res,data);
-        });
-        return
-    } else if (p == '/method/createNewUser'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            createUser(req,res,data);
-        });
-        return
-    } else if (p == '/method/getUserData'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            getUserData(req,res,data);
-        });
-        return
-    } else if (p == '/method/dropPlayer'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/pickupPlayer'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/modifyLineup'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/getFreeAgents'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/getPlayersOnWaivers'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/submitWaiversClaim'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/getWaiversClaim'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            respondOk(req,res,data);
-        });
-        return
-    } else if (p == '/method/checkValue'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            db.checkValue(req,res,data);
-        });
-        return
-    } else if (p == '/method/test'){
-        slackr_utils.ajaxBodyParser(req,function(data){
-            console.log(poop)
-        })
-        
-        return
-    }else {
+    } else  {
         serveStatic.serveStatic(req,res);
-        return;
     }
 }
 
-process.on('uncaughtException',function(err){
-    var data = new Date().toString() + " : " + err +'\n';
-    var pathName = path.join(__dirname,'logs','unhandled.log');
-    console.log(pathName)
-    fs.appendFile(pathName,data,function(){
-        console.error("Exiting!")
-        process.exit();
-    });  
-})
+// process.on('uncaughtException',function(err){
+//     var data = new Date().toString() + " : " + err +'\n';
+//     var pathName = path.join(__dirname,'logs','unhandled.log');
+//     console.log(pathName)
+//     fs.appendFile(pathName,data,function(){
+//         console.error("Exiting!")
+//         process.exit();
+//     });  
+// })
 
 if (process.argv[2] == '-d'){
     app.listen(8125)
