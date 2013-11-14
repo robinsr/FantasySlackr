@@ -1,6 +1,7 @@
 var http =          require('http'),
     https =         require('https'),
     fs =            require('fs'),
+    path =          require('path'),
     crypto =        require('crypto'),
     nodeurl =       require('url'),
     qs =            require('qs'),
@@ -12,7 +13,8 @@ var http =          require('http'),
     async =         require('async'),
     game =          require('./gameMethods'),
     app =           http.createServer(handler),
-    User =          require('./objects/user').User;
+    User =          require('./objects/user').User,
+    Team =          require('./objects/team').Team;
 
 
 function respondInsufficient(req,res){
@@ -27,7 +29,7 @@ function respondInsufficient(req,res){
  *  creates user in database and begins oauth process, sends link to yahoo auth page if successful
  */ 
 function createUser(req, res, userdata) {
-    slackr_utils.checkdata(req,res,["uname","upass","uemail"],userdata,function(){
+    slackr_utils.checkdata(req,res,["uname","upass","uemail","invite"],userdata,function(){
         new User(userdata,function(args){
             var self = this;
             if (self.pass != null){
@@ -62,8 +64,29 @@ function handleApiCallback(req,res){
     var yahooCb = qs.parse(nodeurl.parse(req.url).query);  
 
     new User({request_token: yahooCb.oauth_token},function(args){
-        this.getAccess(function(args){
-            this.setup();
+        var newUser = this;
+        newUser.getAccess(function(args){
+            newUser.getLatestXml(function(args){
+                if (args.keys){
+                    async.each(args.keys,function(key,cb){
+                        new Team({owner: message.user, team_key: key},function(args){
+                            this.save(function(){
+                                cb(null)
+                            })
+                        })
+                    },function(){
+                        newUser.initial_setup = 'complete';
+                        newUser.save(function(){
+                            //???
+                        })
+                    })
+                } else {
+                    newUser.initial_setup = 'complete';
+                    newUser.save(function(){
+                        //???
+                    })
+                }
+            });
         })
     })
 }
@@ -153,8 +176,13 @@ function getUserData(req,res,data){
                 respondInsufficient(req,res);
             },function(){
                 this.stringifyData(function(err,data){
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify(data));
+                    if (!err){
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify(data));
+                    } else {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({error: err.message}));
+                    }
                 })
             })
         })
@@ -250,8 +278,7 @@ function handler(req,res){
         return
     } else if (p == '/method/test'){
         slackr_utils.ajaxBodyParser(req,function(data){
-            res.writeHead(200);
-            res.end(JSON.stringify(data))
+            console.log(poop)
         })
         
         return
@@ -260,6 +287,16 @@ function handler(req,res){
         return;
     }
 }
+
+process.on('uncaughtException',function(err){
+    var data = new Date().toString() + " : " + err +'\n';
+    var pathName = path.join(__dirname,'logs','unhandled.log');
+    console.log(pathName)
+    fs.appendFile(pathName,data,function(){
+        console.error("Exiting!")
+        process.exit();
+    });  
+})
 
 if (process.argv[2] == '-d'){
     app.listen(8125)
