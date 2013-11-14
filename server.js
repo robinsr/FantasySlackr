@@ -59,7 +59,7 @@ function handleApiCallback(req,res){
     fs.readFile('./public/resources/closewindow.html',function(err,content){
         res.writeHead(200);
         res.end(content.toString());
-    })
+    });
     
     var yahooCb = qs.parse(nodeurl.parse(req.url).query);  
 
@@ -233,15 +233,14 @@ console.log("before: "+req.url)
     }
 }
 
-// process.on('uncaughtException',function(err){
-//     var data = new Date().toString() + " : " + err +'\n';
-//     var pathName = path.join(__dirname,'logs','unhandled.log');
-//     console.log(pathName)
-//     fs.appendFile(pathName,data,function(){
-//         console.error("Exiting!")
-//         process.exit();
-//     });  
-// })
+process.on('uncaughtException',function(err){
+    var data = new Date().toString() + " : " + err +'\n';
+    var pathName = path.join(__dirname,'logs','unhandled.log');
+    fs.appendFile(pathName,data,function(){
+        console.error("Exiting!")
+        process.exit();
+    });  
+})
 
 if (process.argv[2] == '-d'){
     app.listen(8125)
