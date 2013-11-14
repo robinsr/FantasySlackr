@@ -191,10 +191,7 @@ function getUserData(req,res,data){
  
     // handles incoming http requests
 function handler(req,res){
-console.log("before: "+req.url)   
     req.url = req.url.replace(/(\/dev|\/fantasyslackr)*/i,'');
-    console.log("after:  "+req.url)
-
     if (req.url.match(/\/apicallback/)){
         handleApiCallback(req,res);
     } else if (req.url.match(/\/method\//)){
