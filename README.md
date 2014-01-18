@@ -24,7 +24,7 @@ FantasySlackr interfaces with Yahoo fantasy football via their publicly availabl
 
 ## RoadMap
 
-* Integrate Mashape oauthModule
+* [x] Integrate Mashape oauthModule
 * Move server over to expressjs
 * Create routes for each model so the front-end can be used to do normal team maintenance operations
 * Refactor "normal team maintenance operations" logic into auto-maintenance logic
