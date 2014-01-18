@@ -38,4 +38,4 @@ FantasySlackr interfaces with Yahoo fantasy football via their publicly availabl
 
 [Yahoo Fantasy Sports API](http://developer.yahoo.com/fantasysports/)
 
-[FantasySlackr](demos.ethernetbucket.com/FantasySlackr) (not always available, sorry)
+[FantasySlackr](http://demos.ethernetbucket.com/FantasySlackr) (not always available, sorry)
