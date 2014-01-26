@@ -8,8 +8,7 @@ var crypto = require('crypto'),
 	Oauth = require('./oauth').Oauth,
  	utils = require('util'),
  	async = require('async'),
- 	extend = require('extend'),
- 	dbMod = require('../util/dbModule');
+ 	extend = require('extend');
 
 var publishChannel = 'new-setup-request';
 

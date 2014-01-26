@@ -7,9 +7,11 @@ var async = require('async'),
 	appErr = require('../util/applicationErrors'),
 	parser = require('libxml-to-js'),
 	extend = require('extend'),
-	Player = require('./player').Player,
-	User = require('./user').User,
-	League = require('./league').League;
+	models = require(__dirname+"/index");
+
+var	Player = models.Player,
+	User = models.User,
+	League = models.League;
 
 
 /**

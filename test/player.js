@@ -1,0 +1,1 @@
+var models = require(__dirname+"/../src/models")
