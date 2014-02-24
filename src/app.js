@@ -40,13 +40,13 @@ if ('development' == app.get('env')) {
  */
 
 // create
-// app.post('/user', user.create);
+app.post('/user', user.create);
 // login
 app.get('/user', user.login);
 // update
-// app.put('/user', auth.check, user.update);
+app.put('/user', auth.check, user.update);
 // delete
-// app.del('/user', auth.check, user.update);
+app.del('/user', auth.check, user.del);
 
 /*
  * ======================

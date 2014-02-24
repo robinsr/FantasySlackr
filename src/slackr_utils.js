@@ -58,3 +58,10 @@ module.exports.checkdata = function(req,res,expectedData,actualdata,cb){
     });
 }
 
+module.exports.isError = function(test,next){
+  if (utils.isError(test)){
+    next(test,null)
+  } else {
+    next(null,test)
+  }
+}

@@ -2,11 +2,12 @@ var assert = require("assert");
 
 describe("ModelIndex",function(){
 	it("Should import models without namespace/requires problmes",function(done){
-		var models = require(__dirname+"/../src/objects/index");
+		var models = require(__dirname+"/../src/objects");
 
 
-		var myplayer = new models.player({retrieved:true},function(){
+		var myplayer = models.player.create({retrieved:true},function(){
 			assert.equal(typeof this.save, "function")
+			console.log(this.save.toString())
 			done()
 		})
 	})

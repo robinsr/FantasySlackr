@@ -9,7 +9,7 @@ var databaseUrl = "fantasyslackr",
 	jsonxml = require('jsontoxml'),
 	parser = require('libxml-to-js'),
 	extend = require('extend'),
-	models = require(__dirname+"/../objects");
+	models = require(__dirname+"/../models");
 
 /**
  * Player Object

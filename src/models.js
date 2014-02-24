@@ -6,4 +6,5 @@ var exp = require(__dirname+"/exporter");
 
 var exporter = new exp();
 
-module.exports.player = exporter.import(__dirname+"/models/player");
+//module.exports.player = exporter.import(__dirname+"/models/player");
+module.exports.user = exporter.import(__dirname+"/models/user");
