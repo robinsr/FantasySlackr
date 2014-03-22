@@ -5,10 +5,10 @@ var crypto = require('crypto'),
 	collections = ["users", "players", "teams", "metadata", "leagues", "activity", "queue"],
 	db = require("mongojs").connect(databaseUrl, collections),
 	objectId = require('mongodb').ObjectID,
-	Oauth = require('./oauth').Oauth,
  	utils = require('util'),
  	async = require('async'),
- 	extend = require('extend');
+ 	extend = require('extend'),
+ 	models = require(__dirname+"/../models");
 
 var publishChannel = 'new-setup-request';
 
@@ -74,15 +74,142 @@ module.exports = function(exporter){
 				next(err)
 			})
 		},
-		setup: function(){},
-		deactivate: function(){},
-		getAccess: function(){},
-		refreshToken: function(){},
-		getOauthContext: function(){},
-		makeSession: function(){},
-		destroySession: function(){},
-		validateSession: function(){},
-		getLatestXml: function(){},
+		/**
+		 *  Creates user: 
+		 *  Checks for taken username,
+		 *  Hashes and salts password,
+		 *  Gets oauth tokens,
+		 *  saves
+		 */
+		init: function(next){
+			var self = this;
+			db.users.findOne({name:self.name},function(err,result){
+				if (err){
+					next(new Error('Error accesing user database'))
+				} else if (result){
+					next( new Error('User Account Already Exists'))
+				} else {
+					var hash_salt = slackr_utils.requestHashAsync(32);
+				    var hashed_pass_and_salt = crypto.createHash('md5').update(opt.upass + hash_salt).digest('hex');
+
+				    self.pass = hashed_pass_and_salt;
+				    self.salt = hash_salt;
+
+				    var oauth = models.oauth.create();
+
+				    oauth.getToken(function(err, tokenDetails){
+						if (err){
+							next(err)
+						} else {
+							extend(self,tokenDetails);
+							self.save(function(err){
+								next(err);
+							});
+						}
+				    })
+				}
+			});
+		},
+		deactivate: function(next){},
+		/*
+		 *  ==================                 ==================
+		 *  ==================      Oauth      ==================
+		 *  ==================                 ==================
+		 */ 
+
+		/**
+		 * Exchanges request token for access token
+		 * @param  {Function} next  Callback
+		 * @return {[type]}         [description]
+		 */
+		getAccess: function(next){
+			var self = this;
+			var oauth = models.oauth.load(self);
+			oauth.getAccess(function(err, tokenDetails){
+				if (err){
+					next(err)
+				} else {
+					extend(self,tokenDetails);
+					self.save(function(err){
+						next(err);
+					});
+				}
+		    })
+		},
+		/**
+		 * Refreshes users token if necessary
+		 * @param  {Function} next callback
+		 */
+		refreshToken: function(next){
+			var self = this;
+			var oauth = models.oauth.load(self).copyTokens(self);
+			oauth.refresh(function(err, tokenDetails){
+				if (err){
+					next(err)
+				} else {
+					extend(self,tokenDetails);
+					self.save(function(err){
+						next(err);
+					});
+				}
+		    })
+		},
+		/**
+		 * Returns a new oauth object based on this user
+		 */
+		getOauthContext: function(next){
+			var self = this;
+			next(models.oauth.load(self));
+		},
+		/**
+		 * creates a new session hash
+		 */
+		makeSession: function(){
+			this.currentLogin = slackr_utils.requestHashAsync();
+			this.save(function(err){
+				next(err)
+			});
+		},
+		/**
+		 * sets the session hash to null
+		 */
+		destroySession: function(next){
+			this.currentLogin = null;
+			this.save(function(err){
+				next(err)
+			});
+		},
+		/**
+		 * returns boolean if parameter matches user's session
+		 */
+		validateSession: function(session){
+			return (this.currentLogin && this.currentLogin != session)
+		},
+		/**
+		 * After calling create and getAccess, fetches initial XML with user's
+		 * team listings. If the users teams are already found in the DB, no event
+		 * is emitted to create them.
+		 * @param  {Function} next Callback
+		 * @return {[type]}        [description]
+		 */
+		getLatestXml: function(next){
+			var self = this;
+			var requestUrl = 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams';
+
+			self.getOauthContext(function(oauth){
+				oauth.get(requestUrl,function(err,response){
+					if (!err){
+						console.log(response)
+						var keys = response.match(/[0-9]{3}\.l\.[0-9]{6}\.t\.[0-9]{1}/g);
+						next(keys.filter(function(v){
+							(!self.teamKeys || !self.teamKeys.indexOf(v))
+						}) || null)
+					} else {
+						next(err)
+					}
+				})
+			})
+		},
 		getAllGameData: function(next){
 			var self = this,
 			return_object = {},
