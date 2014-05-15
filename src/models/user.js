@@ -41,7 +41,7 @@ module.exports = function(exporter){
 				if (err || !result) {
 					next(err || new Error("Could not find user in database"))
 				} else {
-					next(result)
+					next(null,result)
 				}
 			});
 		},
@@ -50,7 +50,7 @@ module.exports = function(exporter){
 				if (err || !result) {
 					next(err || new Error("Could not find user in database"))
 				} else {
-					next(result)
+					next(null,result)
 				}
 			});
 		},
@@ -59,7 +59,7 @@ module.exports = function(exporter){
 				if (err || !result) {
 					next(err || new Error("Could not find user in database"))
 				} else {
-					next(result)
+					next(null,result)
 				}
 			});
 		}
