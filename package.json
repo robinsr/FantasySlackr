@@ -12,6 +12,7 @@
     "mashape-oauth": "~0.1.6",
     "extend": "~1.2.1",
     "qs": "~0.6.5",
-    "log4js": "~0.6.14"
+    "log4js": "~0.6.14",
+    "handlebars": "~2.0.0-alpha.2"
   }
 }

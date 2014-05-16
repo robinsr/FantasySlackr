@@ -33,8 +33,8 @@ describe("User",function(){
 			})
 		});
 		it("Should verify the save",function(done){
-			models.user.findById(myUser._id,function(result){
-				if (util.isError(result)) throw result
+			models.user.findById(myUser._id,function(err, result){
+				if (err) throw result
 				assert.equal(myUser.name, result.name)
 			done()
 			})

@@ -82,6 +82,7 @@ exports = function(exporter){
 			 * Abstracts all oauth/request/parsing logic
 			 */
 			get: function(url,next){
+				var self = this;
 				function getOauthContext(cb){
 					self.oauthContext(function(err,oauth){
 						cb(err,oauth)

@@ -3,22 +3,15 @@ var extend = require('extend'),
 	collections = ["leagues"],
 	db = require("mongojs").connect(databaseUrl, collections);
 
-function League(opt,next){
-	var self = this;
-	extend(true,self,opt)
-	next.call(self,arguments)
-}
 
-League.prototype.save = function(next) {
-	var self = this;
-	db.leagues.save(self,function(err){
-		if (err){
-			arguments.err = new appErr.user("Error saving league in database");
-			next.call(self,arguments)
-		} else {
-			next.call(self,arguments)
+module.exports = function(exporter){
+	return exporter.define('League',{},{},{
+		save = function(next) {
+			var self = this;
+			db.leagues.save(self,function(err){
+				if (err) next(err)
+				else next(null)
+			});
 		}
-	})	
-};
-
-module.exports.League = League;
+	});
+}

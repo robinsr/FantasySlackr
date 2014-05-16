@@ -39,7 +39,7 @@ module.exports = function(exporter){
 		findByName: function(name, next){
 			db.users.findOne({ name: name },function(err,result){
 				if (err || !result) {
-					next(err || new Error("Could not find user in database"))
+					next(err || new Error("Could not find user "+name+" in database"))
 				} else {
 					next(null,result)
 				}
@@ -199,7 +199,6 @@ module.exports = function(exporter){
 			self.getOauthContext(function(oauth){
 				oauth.get(requestUrl,function(err,response){
 					if (!err){
-						console.log(response)
 						var keys = response.match(/[0-9]{3}\.l\.[0-9]{6}\.t\.[0-9]{1}/g);
 						next(keys.filter(function(v){
 							(!self.teamKeys || !self.teamKeys.indexOf(v))

@@ -4,6 +4,17 @@ var util = require('util');
 
 var testCase, testUser, old_access;
 
+var TEST_CASE_INFO = { 
+	name: "Test User",
+	email: "testuser@test.com",
+	pass: "12345",
+	salt: "abcde",
+	teams: ["test team"],
+	leagues: ["test league"],
+	players: ["test player"],
+	activity: ["test activity"]
+}
+
 
 
 describe("Oauth",function(){
@@ -24,21 +35,17 @@ describe("Oauth",function(){
 			})
 		})
 	});
-	describe("create test user",function(){
+	describe(" - Creating test user - ",function(){
 		it("Should create a test user",function(done){
-			models.user.findByName("name",function(result){
-				if (util.isError(result)) throw err;
-				testUser = models.user.load(result);
-				assert.ok(testUser.access_token != null, "Test user has null access token");
-				old_access = testUser.access_token;
-				done()
-			})
+			testUser = models.user.load(TEST_CASE_INFO);
+			assert.ok(testUser.access_token != null, "Test user has null access token");
+			old_access = testUser.access_token;
+			done();
 		})
 	});
 
 	describe("refresh",function(){
 		it("Should refresh the test users token",function(done){
-			console.log(testUser)
 			testUser.refreshToken(function(err){
 				if (err) throw err;
 				assert.ok(testUser.access_token != old_access, "Test users access token was not refreshed");
