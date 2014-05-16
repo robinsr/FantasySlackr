@@ -1,0 +1,14 @@
+<xml>
+<fantasy_content>
+<roster>
+<coverage_type>week</coverage_type>
+<week>{{week}}</week>
+<players>
+<player>
+<player_key>{{player_key}}</player_key>
+<position>{{position}}</position>
+</player>
+</players>
+</roster>
+</fantasy_content>
+</xml>
