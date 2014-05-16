@@ -114,7 +114,7 @@ exports = function(exporter){
 			getPlayersFromYahoo: function(opt,next) {
 				var self = this;
 				var playerArray = [];
-				var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/league/%s/players", self.league_key);
+				var requestUrl = utils.format("fantasy/v2/league/%s/players", self.league_key);
 
 				if (opt.position){
 					requestUrl += utils.format(";position=%s", opt.position)
@@ -161,7 +161,7 @@ exports = function(exporter){
 			},
 			getLatestXml: function(next) {
 				var self = this;
-				var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/team/%s/roster/players", self.team_key);
+				var requestUrl = utils.format("fantasy/v2/team/%s/roster/players", self.team_key);
 
 				async.auto({
 					// step 1: make a request for roster
@@ -209,7 +209,7 @@ exports = function(exporter){
 			},
 			getLeague: function(next) {
 				var self = this;
-				var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/league/%s/settings", self.league_key);
+				var requestUrl = utils.format("fantasy/v2/league/%s/settings", self.league_key);
 
 				self..get(requestUrl,function(err,leagueData){
 					if (!err){

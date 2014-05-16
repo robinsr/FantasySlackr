@@ -122,7 +122,7 @@ module.exports = function(exporter){
 		 */
 		getLatestXml: function(next) {
 			var self = this;
-			var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/player/%s/stats", self.player_key);
+			var requestUrl = utils.format("fantasy/v2/player/%s/stats", self.player_key);
 			self.get(requestUrl,function(err,newData){
 				if (!err){
 					console.log('Success: Fetched new data')
@@ -143,7 +143,7 @@ module.exports = function(exporter){
 		 */
 		getLatestPosition: function(next) {
 			var self = this
-			var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/team/%s/roster/players", self.team_key);
+			var requestUrl = utils.format("fantasy/v2/team/%s/roster/players", self.team_key);
 			self.get(requestUrl,function(err,newData){
 				if (!err){
 					console.log('Success: Fetched new data');
@@ -163,7 +163,7 @@ module.exports = function(exporter){
 		},
 		getOwnership: function(next) {
 			var self = this
-			var requestUrl = utils.format("http://fantasysports.yahooapis.com/fantasy/v2/player/%s/percent_owned", self.player_key);
+			var requestUrl = utils.format("fantasy/v2/player/%s/percent_owned", self.player_key);
 			self.get(requestUrl,function(err,response){
 				if (!err){
 					parser(response,function(err,newData){
@@ -228,7 +228,7 @@ module.exports = function(exporter){
 		_movePlayer: function(desired_position, next){
 			log.info("Moving %s to %s", this.name.full, position);
 			var self = this;
-			var requestURL = "http://fantasysports.yahooapis.com/fantasy/v2/team/"+self.team_key+"/roster";
+			var requestURL = "fantasy/v2/team/"+self.team_key+"/roster";
 
 			async.waterfall([
 				function(cb){

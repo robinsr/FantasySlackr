@@ -194,7 +194,7 @@ module.exports = function(exporter){
 		 */
 		getLatestXml: function(next){
 			var self = this;
-			var requestUrl = 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games/teams';
+			var requestUrl = 'fantasy/v2/users;use_login=1/games/teams';
 
 			self.getOauthContext(function(oauth){
 				oauth.get(requestUrl,function(err,response){

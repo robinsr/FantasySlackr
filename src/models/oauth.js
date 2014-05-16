@@ -5,6 +5,8 @@ var http = require('http'),
 	extend = require('extend'),
 	dbMod = require('../util/dbModule'),
     config = require('../config');
+var NODE_ENV = process.env.NODE_ENV || 'development';
+var endpoint = config[NODE_ENV].endpoint;
 
 /**
  * Oauth Object. gets Request Tokens, gets Access Token, makes signed requests using
@@ -137,6 +139,7 @@ module.exports = function(exporter){
 		 * Makes an oauth GET request
 		 */
 		get: function(url,next){
+			final url = endpoint + url;
 			var self = this;
 			self.refresh(function(err){
 				if (err){
@@ -167,6 +170,7 @@ module.exports = function(exporter){
 		 * Makes an oauth PUT request
 		 */
 		put: function(url, xml, next){
+			final url = endpoint + url;
 			var self = this;
 			self.refresh(function(err){
 				if (err){
