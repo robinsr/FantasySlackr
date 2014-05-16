@@ -1,12 +1,14 @@
-var http = require('http'),
-    utils = require('util'),
-    mashape = require('mashape-oauth').OAuth,
-	appErr = require('../util/applicationErrors'),
-	extend = require('extend'),
-	dbMod = require('../util/dbModule'),
-    config = require('../config');
+var http = require('http');
+var utils = require('util');
+var mashape = require('mashape-oauth').OAuth;
+var appErr = require('../util/applicationErrors');
+var extend = require('extend');
+var dbMod = require('../util/dbModule');
+var config = require('../config');
+var log = require('log4js').getLogger('Oauth');
 var NODE_ENV = process.env.NODE_ENV || 'development';
 var endpoint = config[NODE_ENV].endpoint;
+log.debug("Oauth using endpoint %s", endpoint);
 
 /**
  * Oauth Object. gets Request Tokens, gets Access Token, makes signed requests using
@@ -139,7 +141,7 @@ module.exports = function(exporter){
 		 * Makes an oauth GET request
 		 */
 		get: function(url,next){
-			final url = endpoint + url;
+			var url = endpoint + url;
 			var self = this;
 			self.refresh(function(err){
 				if (err){
@@ -170,7 +172,7 @@ module.exports = function(exporter){
 		 * Makes an oauth PUT request
 		 */
 		put: function(url, xml, next){
-			final url = endpoint + url;
+			var url = endpoint + url;
 			var self = this;
 			self.refresh(function(err){
 				if (err){

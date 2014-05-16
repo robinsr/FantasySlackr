@@ -6,7 +6,7 @@ module.exports = {
     },
     development: {
     	endpoint: "http://fantasysports.yahooapis.com/"
-    }
+    },
     prod: {
     	endpoint: "http://fantasysports.yahooapis.com/"
     }
