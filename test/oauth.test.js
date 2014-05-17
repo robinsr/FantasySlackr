@@ -1,6 +1,7 @@
 var models = require(__dirname+"/../src/models");
 var assert = require('assert');
 var util = require('util');
+var aoo = require(__dirname + '/server');
 
 var testCase, testUser, old_access;
 

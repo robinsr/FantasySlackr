@@ -7,7 +7,11 @@ var dbMod = require('../util/dbModule');
 var config = require('../config');
 var log = require('log4js').getLogger('Oauth');
 var NODE_ENV = process.env.NODE_ENV || 'development';
+
 var endpoint = config[NODE_ENV].endpoint;
+var requestUrl = config[NODE_ENV].requestUrl;
+var accessUrl = config[NODE_ENV].accessUrl;
+
 log.debug("Oauth using endpoint %s", endpoint);
 
 /**
@@ -46,7 +50,7 @@ module.exports = function(exporter){
 			getPlaintext(self.consumerKey,self.consumerSecret,function(oa){
 				oa.getOAuthRequestToken(function (error, request_token, request_verifier, results) {
 					if (error){
-						next(new Error("Error getting request token"))
+						next(error)
 					} else {
 						self.tokenDetails.request_token = request_token;
 						self.tokenDetails.request_verifier = request_verifier;
@@ -104,9 +108,10 @@ module.exports = function(exporter){
 						parameters : {
 							oauth_session_handle: self.tokenDetails.session_handle
 						}
-					}, function (error, token, secret, result) {
-						if (error){
-							next(new Error(error.data))
+					}, function (err, token, secret, result) {
+						if (err){
+							log.error(err);
+							next(err)
 						} else {
 							next(null, {
 								access_token: token,
@@ -205,8 +210,8 @@ function getPlaintext(k,s,next){
   	// oauth object for getting access
     next(new mashape({
 	    realm: 'apis.yahoo.com',
-	    requestUrl: 'https://api.login.yahoo.com/oauth/v2/get_request_token',
-	    accessUrl: 'https://api.login.yahoo.com/oauth/v2/get_token',
+	    requestUrl: requestUrl,
+	    accessUrl: accessUrl,
 	    consumerKey: k,
 	    consumerSecret: s,
 	    signatureMethod: 'PLAINTEXT',
@@ -225,8 +230,8 @@ function getHmac(k,s,next){
   	// oauth object for getting access
     next(new mashape({
 	    realm: 'apis.yahoo.com',
-	    requestUrl: 'https://api.login.yahoo.com/oauth/v2/get_request_token',
-	    accessUrl: 'https://api.login.yahoo.com/oauth/v2/get_token',
+	    requestUrl: requestUrl,
+	    accessUrl: accessUrl,
 	    consumerKey: k,
 	    consumerSecret: s,
 	    signatureMethod: 'HMAC-SHA1',

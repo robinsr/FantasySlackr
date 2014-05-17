@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<response>
+	<oauth_parameter name="oauth_token">token</oauth_parameter>
+	<oauth_parameter name="oauth_token_secret">secret</oauth_parameter>
+</response>
