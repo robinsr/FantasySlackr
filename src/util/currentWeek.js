@@ -1,3 +1,3 @@
-module.exports.week = function(){
-	return "8"
-}
+module.exports.week = function () {
+  return '8';
+};

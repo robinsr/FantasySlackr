@@ -6,8 +6,6 @@
 //     obj =           require('./objects'),
 //     async =         require('async'),
 //     u =             require('underscore');
-
-
 // var apiUrls = {
 //     users: 'http://fantasysports.yahooapis.com/fantasy/v2/users;use_login=1/games',
 //     game: 'http://fantasysports.yahooapis.com/fantasy/v2/game/',  // add game_key
@@ -17,8 +15,6 @@
 //     rosterA:'http://fantasysports.yahooapis.com/fantasy/v2/team/',
 //     rosterB:'/roster'
 // }
-
-
 // function setupRoster(user_object,newTeam,token,secret,cb){
 //     var url = apiUrls.rosterA+newTeam.team_key+apiUrls.rosterB
 //     oauth.getYahoo(url,token,secret,function(err,result){
@@ -34,9 +30,7 @@
 //             }
 //             db.sampleResponses(sample);
 //             var doc = new dom().parseFromString(result);
-
 //             var players = xpath.select('//player',doc);
-
 //             async.each(players,function(player,b){
 //                 console.log(xpath.select('selected_position/position/text()',player).toString());
 //                 newTeam.roster.push(new obj.player({
@@ -71,7 +65,6 @@
 //         if (err) {
 //             console.log('error updateRoster')
 //         } else {
-
 //         }
 //     })
 // }
@@ -94,9 +87,7 @@
 //                         response: result
 //                     }
 //                     db.sampleResponses(sample);
-
 //                     var doc = new dom().parseFromString(result);
-
 //                     var league = {
 //                         _id : new objectid(),
 //                         league_key : xpath.select('//league/league_key/text()',doc).toString(),
@@ -104,7 +95,6 @@
 //                         url: xpath.select('//league/url/text()',doc).toString(),
 //                         roster_positions: []
 //                     }
-
 //                     var positions = xpath.select('//roster_position',doc);
 //                     async.each(positions,function(pl,next){
 //                         league.roster_positions.push({
@@ -134,10 +124,8 @@
 //                 response: result
 //             }
 //             db.sampleResponses(sample);
-
 //             var doc = new dom().parseFromString(result);
 //             var teams = xpath.select('//team',doc);            
-
 //             async.each(teams,function(team,c){
 //                var newTeam = new obj.team({
 //                     id: new objectid(),
@@ -183,9 +171,7 @@
 //                 response: result
 //             }
 //             db.sampleResponses(sample);
-
 //             var upToDateRoster = [];
-
 //             var doc = new dom().parseFromString(result);
 //             var players = xpath.select('//player',doc);
 //             async.each(players,function(player,b){

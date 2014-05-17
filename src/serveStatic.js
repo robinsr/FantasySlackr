@@ -1,8 +1,5 @@
-var fs = require('fs'),
-    path = require('path');
-
-    // handles static content - usually passed off to nginx after dev is complete
-
+var fs = require('fs'), path = require('path');
+// handles static content - usually passed off to nginx after dev is complete
 var mimeType = {
     '.js': 'text/javascript',
     '.html': 'text/html',
@@ -16,32 +13,27 @@ var mimeType = {
     '.woff': 'application/x-font-woff',
     '.eot': 'application/vnd.ms-fontobject',
     '': 'text/html'
-};
-
-var serveStatic = function(req, res) {
-    var filePath = '.' + req.url;
-    if (filePath == './') {
-        filePath = './public/index.html';
+  };
+var serveStatic = function (req, res) {
+  var filePath = '.' + req.url;
+  if (filePath == './') {
+    filePath = './public/index.html';
+  }
+  fs.exists(filePath, function (exists) {
+    if (exists) {
+      fs.readFile(filePath, function (error, content) {
+        if (error) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          res.end();
+        } else {
+          res.writeHead(200, { 'Content-Type': mimeType[path.extname(filePath)] });
+          res.end(content, 'utf-8');
+        }
+      });
+    } else {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('404 - Not Found - ' + filePath);
     }
-    fs.exists(filePath, function (exists) {
-        if (exists) {
- 
-            fs.readFile(filePath, function (error, content) {
-                if (error) {
-                    res.writeHead(500, { 'Content-Type': 'text/plain' });
-                    res.end();
-                }
-                else {
-                    res.writeHead(200, { 'Content-Type': mimeType[path.extname(filePath)] });
-                    res.end(content, 'utf-8');
-                }
-            });
-        }
-        else {
-            res.writeHead(404, { 'Content-Type': 'text/plain' });
-            res.end('404 - Not Found - '+filePath);
-        }
-    });
-}
-
+  });
+};
 module.exports.serveStatic = serveStatic;
