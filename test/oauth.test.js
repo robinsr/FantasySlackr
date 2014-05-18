@@ -27,9 +27,9 @@ describe('Oauth', function () {
       testCase.getToken(function (err) {
         if (err)
           throw err;
-        assert.ok(testCase.tokenDetails.request_token != null, 'No token');
-        assert.ok(testCase.tokenDetails.request_verifier != null, 'No verifier');
-        assert.ok(testCase.tokenDetails.xoauth_request_auth_url != null, 'No redirect url');
+        assert.ok(testCase.tokenDetails.request_token !== null, 'No token');
+        assert.ok(testCase.tokenDetails.request_verifier !== null, 'No verifier');
+        assert.ok(testCase.tokenDetails.xoauth_request_auth_url !== null, 'No redirect url');
         done();
       });
     });

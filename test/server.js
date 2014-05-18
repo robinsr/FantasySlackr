@@ -20,6 +20,16 @@ app.put('*', function (req, res) {
   log.debug('PUT');
   log.debug(req.url);
 });
+app.get('/playerGetTest',function (req, res){
+	log.debug('/playerGetTest');
+	res.send(templates._success({}));
+});
+app.get('/fantasy/v2/team/:teamkey/roster/players',function(req,res){
+	res.send(templates._roster({}));
+});
+app.get('/fantasy/v2/player/:playerkey/stats',function(req,res){
+	res.send(templates._stats({}));
+});
 app.get('*', function (req, res) {
   log.debug('Got a GET');
   res.send(templates._success({}));
