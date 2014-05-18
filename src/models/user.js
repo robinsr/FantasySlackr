@@ -21,6 +21,7 @@ var log = require('log4js').getLogger('User');
 var publishChannel = 'new-setup-request';
 module.exports = function (exporter) {
   return exporter.define('User', {
+    _id: null,
     name: null,
     email: null,
     initial_setup: 'incomplete',
@@ -45,7 +46,7 @@ module.exports = function (exporter) {
     findByName: function (name, next) {
       db.users.findOne({ name: name }, function (err, result) {
         if (err || !result) {
-          next(err || new Error('Could not find user ' + name + ' in database'));
+          next(err || new Error('No result'));
         } else {
           next(null, result);
         }
@@ -54,7 +55,7 @@ module.exports = function (exporter) {
     findByRequestToken: function (token, next) {
       db.users.findOne({ request_token: token }, function (err, result) {
         if (err || !result) {
-          next(err || new Error('Could not find user in database'));
+          next(err || new Error('No result'));
         } else {
           next(null, result);
         }
@@ -65,12 +66,23 @@ module.exports = function (exporter) {
         id = new ObjectID(id);
       db.users.findOne({ _id: id }, function (err, result) {
         if (err || !result) {
-          next(err || new Error('Could not find user in database'));
+          next(err || new Error('No result'));
         } else {
           next(null, result);
         }
       });
-    }
+    },
+    doesNameExist: function(name,next){
+      this.findByName(name,function(err){
+        if (!err)
+          next(null,true);
+        else if (err.toString() !== 'No Result')
+          next(err);
+        else 
+          next(null,false);
+      });
+    },
+
   }, {
     save: function (next) {
       db.users.save(this, function (err) {
@@ -126,10 +138,13 @@ module.exports = function (exporter) {
     },
     refreshToken: function (next) {
       var self = this;
-      var oauth = models.oauth.load(self).copyTokens(self);
+      var oauth = self.getOauthContext();
       oauth.refresh(function (err, tokenDetails) {
         if (err) {
           next(err);
+        } else if (!tokenDetails){ // tokens are still good
+          log.info("User's token is not expired");
+          next(null);
         } else {
           extend(self, tokenDetails);
           self.save(function (err) {
@@ -138,9 +153,14 @@ module.exports = function (exporter) {
         }
       });
     },
-    getOauthContext: function (next) {
+    getOauthContext: function () {
       var self = this;
-      next(models.oauth.load(self));
+      var copy = ["request_token","request_verifier","request_token_secret","xoauth_request_auth_url","access_token","access_token_secret","access_token_expires","session_handle","session_handle_expires","guid"];
+      var oauth = models.oauth.create();
+      copy.forEach(function(c){
+        oauth.tokenDetails[c] = self[c];
+      });
+      return oauth;
     },
     makeSession: function () {
       this.currentLogin = slackr_utils.requestHashAsync();
@@ -176,7 +196,7 @@ module.exports = function (exporter) {
     getAllGameData: function (next) {
       var self = this, return_object = {}, parallel = {
           players: function (cb) {
-            if (!self.players) {
+            if (!self.players.length) {
               self.getPlayers(function (err, result) {
                 cb(err, result);
               });
@@ -185,7 +205,7 @@ module.exports = function (exporter) {
             }
           },
           teams: function (cb) {
-            if (!self.teams) {
+            if (!self.teams.length) {
               self.getTeams(function (err, result) {
                 cb(err, result);
               });
@@ -194,7 +214,7 @@ module.exports = function (exporter) {
             }
           },
           leagues: function (cb) {
-            if (!self.leagues) {
+            if (!self.leagues.length) {
               self.getLeagues(function (err, result) {
                 cb(err, result);
               });
@@ -203,7 +223,7 @@ module.exports = function (exporter) {
             }
           },
           activity: function (cb) {
-            if (!self.activity) {
+            if (!self.activity.length) {
               self.getActivity(function (err, result) {
                 cb(err, result);
               });
@@ -218,61 +238,34 @@ module.exports = function (exporter) {
     },
     getPlayers: function (next) {
       var self = this;
-      var args = { owner: self._id };
-      if (team_key) {
-        args.team_key = team_key;
-      }
-      console.log(args);
-      db.players.find(args, function (err, result) {
-        if (!err) {
+      models.player.findByOwner(self._id, function (err, result) {
+        if (result) 
           self.players = result;
-          next(null, self.players);
-        } else if (err) {
-          next(err);
-        }
+        next(err, result);
       });
     },
     getLeagues: function (next) {
       var self = this;
-      self.getTeams(function (args) {
-        if (!args.err && this.teams && this.teams.length > 0) {
-          async.eachSeries(this.teams, function (team, cb) {
-            db.leagues.find({ league_key: team.league_key }, function (err, result) {
-              if (err) {
-                cb(err);
-              } else {
-                self.leagues.push(result[0]);
-                cb(null);
-              }
-            }, function (err) {
-              next(err, self.leagues);
-            });
-          });
-        } else {
-          next(err);
-        }
+      models.league.findByOwner(self._id, function (err, result) {
+        if (result) 
+          self.leagues = result;
+        next(err, result);
       });
     },
     getTeams: function (next) {
       var self = this;
-      db.teams.find({ owner: self._id }, function (err, result) {
-        if (err) {
-          next(err);
-        } else {
+      models.team.findByOwner(self._id, function (err, result) {
+        if (result) 
           self.teams = result;
-          next(null, self.teams);
-        }
+        next(err, result);
       });
     },
     getActivity: function (next) {
       var self = this;
-      db.activity.find({ name: self.name }).sort({ date: -1 }).limit(5, function (err, result) {
-        if (err) {
-          next(err);
-        } else {
+      models.activity.findByOwner(self._id, function (err, result) {
+        if (result) 
           self.activity = result;
-          next(null, self.activity);
-        }
+        next(err, result);
       });
     }
   });

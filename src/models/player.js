@@ -15,6 +15,7 @@ var parser = require('libxml-to-js');
 var extend = require('extend');
 var models = require(__dirname + '/../models');
 var templates = require(__dirname + '/../xml/templates');
+var log = require('log4js').getLogger('Player');
 /**
  * Player Object
  * Get player from database: pass team_key and player_key only will trigger mongo query
@@ -22,37 +23,72 @@ var templates = require(__dirname + '/../xml/templates');
  */
 module.exports = function (exporter) {
   return exporter.define('Player', {
-    name: {
-      first: null,
-      last: null,
-      full: null
+    settings : {
+      never_drop : null,
+      start_if_probable : null,
+      start_if_questionable : null
     },
-    settings: {
-      never_drop: true,
-      start_if_probable: true,
-      start_if_questionable: false
+    player_key : null,
+    player_id : null,
+    name : {
+      full : null,
+      first : null,
+      last : null,
+      ascii_first : null,
+      ascii_last : null
     },
-    team_key: null,
-    player_key: null,
-    bye_week: null
+    status : null,
+    editorial_player_key : null,
+    editorial_team_key : null,
+    editorial_team_full_name : null,
+    editorial_team_abbr : null,
+    bye_weeks : {
+      week : null
+    },
+    uniform_number : null,
+    display_position : null,
+    headshot : {
+      url : null,
+      size : null
+    },
+    image_url : null,
+    is_undroppable : null,
+    position_type : null,
+    eligible_positions : {
+      position : null
+    },
+    has_player_notes : null,
+    has_recent_player_notes : null,
+    selected_position : {
+      coverage_type : null,
+      week : null,
+      position : null
+    },
+    owner : null,
+    team_key : null,
+    retrieved : null,
+    _id : null
   }, {
     findByPlayerAndTeamKey: function (player_key, team_key, next) {
       db.players.findOne({
-        player_key: self.player_key,
-        team_key: self.team_key || self.provisional_team_key
+        player_key: player_key,
+        team_key: team_key
       }, function (err, result) {
-        if (err)
-          next(err);
-        else
-          next(null, result);
+        next(err,result);
       });
     },
-    findById: function () {
+    findById: function (id, next) {
+      if (typeof id == 'string')
+        id = new ObjectID(id);
       db.players.findOne({ _id: id }, function (err, result) {
-        if (err)
-          next(err);
-        else
-          next(null, result);
+        next(err,result);
+      });
+    },
+    findByOwner: function(owner, next){
+      if (typeof owner == 'string')
+        owner = new ObjectID(owner);
+      db.players.find({ owner: owner }, function (err, result){
+        next(err,result);
       });
     }
   }, {
@@ -61,24 +97,34 @@ module.exports = function (exporter) {
         next(err);
       });
     },
+    remove: function (next) {
+      db.players.remove({_id: this._id}, function (err) {
+        next(err);
+      });
+    },
     oauthContext: function (next) {
+      var self = this;
       async.waterfall([
         function (cb) {
-          models.User.findById(this.owner, function (err, result) {
+          models.user.findById(self.owner, function (err, result) {
             cb(err, result);
           });
         },
-        function (cb, user) {
-          var u = models.User.load(user);
-          u.getOauthContext(function (err, oauth) {
-            next(err, oauth);
+        function (user, cb) {
+          user = models.user.load(user);
+          user.refreshToken(function (err) {
+            cb(err,user);
           });
+        },
+        function (user, cb){
+          var oauth = user.getOauthContext();
+          cb(null,oauth);
         }
       ], function (err, result) {
         next(err, result);
       });
     },
-    get: function (url, next) {
+    get: function (requestUrl, next) {
       var self = this;
       function getOauthContext(cb) {
         self.oauthContext(function (err, oauth) {
@@ -90,7 +136,7 @@ module.exports = function (exporter) {
           cb(err, response);
         });
       }
-      function parseData(data, cb) {
+      function parseData(response, cb) {
         parser(response, function (err, jsObject) {
           cb(err, jsObject);
         });
@@ -122,12 +168,12 @@ module.exports = function (exporter) {
         next(err, result);
       });
     },
-    getLatestXml: function (next) {
+    getLatestStats: function (next) {
       var self = this;
       var requestUrl = utils.format('fantasy/v2/player/%s/stats', self.player_key);
       self.get(requestUrl, function (err, newData) {
         if (!err) {
-          console.log('Success: Fetched new data');
+          log.info('Success: Fetched new data');
           newData.player.retrieved = new Date().getTime();
           extend(self, newData.player);
           self.save(function (err) {
@@ -143,22 +189,24 @@ module.exports = function (exporter) {
       var requestUrl = utils.format('fantasy/v2/team/%s/roster/players', self.team_key);
       self.get(requestUrl, function (err, newData) {
         if (!err) {
-          console.log('Success: Fetched new data');
-          newData.team.roster.players.player.forEach(function (p) {
-            if (p.player_key == self.player_key) {
-              self.retrieved = new Date().getTime();
-              extend(true, self, p.selected_position);
-              self.save(function (err) {
-                next(err);
-              });
-            }
+          var relevantPlayer = newData.team.roster.players.player.filter(function(p){
+            return p.player_key == self.player_key;
           });
+          if (relevantPlayer[0]){
+            self.retrieved = new Date().getTime();
+            self.selected_position = relevantPlayer.selected_position;
+            self.save(function (err) {
+              next(err);
+            });
+          } else {
+            next(new Error("Cannot get current position of player! Is this player on this team?"));
+          }          
         } else {
           next(err);
         }
       });
     },
-    getOwnership: function (next) {
+    getOwnershipPercentage: function (next) {
       var self = this;
       var requestUrl = utils.format('fantasy/v2/player/%s/percent_owned', self.player_key);
       self.get(requestUrl, function (err, response) {
@@ -201,7 +249,7 @@ module.exports = function (exporter) {
       log.info('Moving %s to %s', this.name.full, position);
       var self = this;
       var requestURL = 'fantasy/v2/team/' + self.team_key + '/roster';
-      async.waterfall([
+      async.series([
         function (cb) {
           self.getLatestPosition(function (err) {
             next(err);
@@ -215,13 +263,12 @@ module.exports = function (exporter) {
           }
         },
         function (cb) {
-          cb(null, templates.movePlayer.render({
+          // dont render XML till last minute
+          var requestXML = templates.movePlayer.render({
             week: '13',
             player_key: self.player_key,
             position: desired_position
-          }));
-        },
-        function (cb, requestXML) {
+          });
           self.put(requestURL, requestXML, function (err, response) {
             log.error(err);
             log.debug(response);

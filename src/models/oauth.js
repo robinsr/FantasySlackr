@@ -10,6 +10,13 @@ var NODE_ENV = process.env.NODE_ENV || 'development';
 var endpoint = config[NODE_ENV].endpoint;
 var requestUrl = config[NODE_ENV].requestUrl;
 var accessUrl = config[NODE_ENV].accessUrl;
+
+var databaseUrl = 'fantasyslackr';
+var collections = [
+    'metadata'
+  ];
+var db = require('mongojs').connect(databaseUrl, collections);
+
 log.debug('Oauth using endpoint %s', endpoint);
 /**
  * Oauth Object. gets Request Tokens, gets Access Token, makes signed requests using
@@ -135,8 +142,9 @@ module.exports = function (exporter) {
                 dbMod.apiRequestCounter('error');
                 next(err);
               } else {
-                console.log(result);
                 dbMod.apiRequestCounter('success');
+                if (process.env.NODE_ENV !== 'test')
+                  db.metadata.save({data:result,url:url});
                 next(null, result);
               }
             });
@@ -158,6 +166,8 @@ module.exports = function (exporter) {
               oauth_token: self.tokenDetails.access_token,
               oauth_token_secret: self.tokenDetails.access_token_secret
             }, function (err, result) {
+              if (!err && process.env.NODE_ENV !== 'test')
+                db.metadata.save({data:result,url:url,put:xml});
               next(err, result);
             });
           });

@@ -6,12 +6,12 @@ var collections = [
     'players'
   ];
 var db = require('mongojs').connect(databaseUrl, collections);
-var objectId = require('mongodb').ObjectID;
+var ObjectID = require('mongodb').ObjectID;
 var utils = require('util');
 var appErr = require('../util/applicationErrors');
 var parser = require('libxml-to-js');
 var extend = require('extend');
-var models = require(__dirname + '/index');
+var models = require(__dirname + '/../models');
 var log = require('log4js').getLogger('Team');
 var Player = models.Player, User = models.User, League = models.League;
 /**
@@ -19,7 +19,7 @@ var Player = models.Player, User = models.User, League = models.League;
  * @param {object}   opt  opt.team_key
  * @param {Function} next [description]
  */
-exports = function (exporter) {
+module.exports = function (exporter) {
   return exporter.define('Team', {
     setting: {
       probable_player: 'start',
@@ -35,8 +35,38 @@ exports = function (exporter) {
       emails: true,
       injury_reports: true
     },
-    team_key: null,
-    league_key: null,
+    team_key : null,
+    owner : null,
+    team_id : null,
+    name : null,
+    is_owned_by_current_login : null,
+    url : null,
+    team_logos : {
+        team_logo : {
+            size : null,
+            url : null
+        }
+    },
+    waiver_priority : null,
+    number_of_moves : null,
+    number_of_trades : null,
+    roster_adds : {
+        coverage_type : null,
+        coverage_value : null,
+        value : null
+    },
+    clinched_playoffs : null,
+    managers : {
+        manager : {
+            manager_id : null,
+            nickname : null,
+            guid : null,
+            is_commissioner : null,
+            is_current_login : null
+        }
+    },
+    league_key : null,
+    _id : null,
     roster: null
   }, {
     findByKey: function (teamkey, next) {
@@ -48,6 +78,13 @@ exports = function (exporter) {
         } else {
           next(result);
         }
+      });
+    },
+    findByOwner: function(owner, next){
+      if (typeof owner == 'string')
+        owner = new ObjectID(owner);
+      db.players.find({ owner: owner }, function (err, result) {
+        next(err,result);
       });
     }
   }, {
@@ -240,22 +277,3 @@ exports = function (exporter) {
     }
   });
 };
-/**
- * deepProperty - finds if a deeply nested key exists
- * @param  {[type]}   testString ex: "i.am.a.deeply.nested.key"
- * @param  {Object} callback   object with fail and success functions
- */
-Object.prototype.deepProperty = function (testString, callback) {
-  var exists = true;
-  try {
-    eval(testString);
-  } catch (e) {
-    exists = false;
-  } finally {
-    if (exists)
-      callback.success.call(this, arguments);
-    else
-      callback.fail.call(this, arguments);
-  }
-};
-module.exports.Team = Team;
