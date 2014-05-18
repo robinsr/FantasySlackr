@@ -58,3 +58,21 @@ module.exports.isError = function (test, next) {
     next(null, test);
   }
 };
+/**
+ * deepProperty - finds if a deeply nested key exists
+ * @param  {[type]}   testString ex: "i.am.a.deeply.nested.key"
+ * @param  {Object} callback   object with fail and success functions
+ */
+Object.prototype.deepProperty = function (testString, callback) {
+  var exists = true;
+  try {
+    eval(testString);
+  } catch (e) {
+    exists = false;
+  } finally {
+    if (exists)
+      callback.success.call(this, arguments);
+    else
+      callback.fail.call(this, arguments);
+  }
+};

@@ -4,7 +4,10 @@ module.exports = {
   test: {
     endpoint: 'http://localhost:3001/',
     requestUrl: 'https://api.login.yahoo.com/oauth/v2/get_request_token',
-    accessUrl: 'https://api.login.yahoo.com/oauth/v2/get_token'
+    accessUrl: 'https://api.login.yahoo.com/oauth/v2/get_token',
+    userID: "522611fbeab60bb61e000001",
+    username: "name",
+    guid: "FHNPRSWAAUPJABXDWAD4FQJR34"
   },
   development: {
     endpoint: 'http://fantasysports.yahooapis.com/',
