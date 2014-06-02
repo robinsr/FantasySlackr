@@ -1,24 +1,31 @@
 {
   "name": "FantasySlackr",
   "description": "",
+  "repository": "https://github.com/robinsr/FantasySlackr.git",
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "mongojs": "~0.9.6",
     "async": "~0.2.9",
-    "jsontoxml": "0.0.11",
-    "mongodb": "~1.3.19",
-    "libxml-to-js": "~0.3.11",
-    "mashape-oauth": "~0.1.6",
-    "extend": "~1.2.1",
-    "qs": "~0.6.5",
-    "log4js": "~0.6.14",
-    "handlebars": "~2.0.0-alpha.2",
     "express": "~3.6.0",
-    "mocha": "~1.18.2"
+    "extend": "~1.2.1",
+    "grunt-contrib-concat": "^0.4.0",
+    "grunt-contrib-cssmin": "^0.9.0",
+    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-contrib-sass": "^0.7.3",
+    "grunt-contrib-uglify": "^0.4.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "handlebars": "~2.0.0-alpha.2",
+    "jsontoxml": "0.0.11",
+    "libxml-to-js": "~0.3.11",
+    "log4js": "~0.6.14",
+    "mashape-oauth": "~0.1.6",
+    "mocha": "~1.18.2",
+    "mongodb": "~1.3.19",
+    "mongojs": "~0.9.6",
+    "qs": "~0.6.5"
   },
   "scripts": {
-    "start": "NODE_ENV=development ./node_modules/.bin/nodemon app.js",
+    "start": "NODE_ENV=development nodemon src/app.js",
     "test": "NODE_ENV=test ./node_modules/.bin/mocha --reporter spec test/test.js"
   }
 }
