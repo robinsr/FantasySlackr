@@ -76,3 +76,16 @@ Object.prototype.deepProperty = function (testString, callback) {
       callback.fail.call(this, arguments);
   }
 };
+
+var clone = function(obj){
+// return primitives
+  if(obj == null || typeof(obj) != 'object') return obj;
+  // create a blank obkect {} or array []
+  var temp = obj.constructor();
+  // copy keys over recursive
+  for(var key in obj)
+    console.log(key);
+    temp[key] = clone(obj[key]);
+  return temp;
+}
+module.exports.clone = clone;

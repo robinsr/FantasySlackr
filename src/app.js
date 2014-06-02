@@ -2,8 +2,8 @@
  * Module dependencies.
  */
 var express = require('express');
-var routes = require('./routes');
-var user = require('./routes/user');
+var user = require(__dirname + '/routes/user');
+var auth = require(__dirname + '/routes/auth');
 //var oauth = require('./routes/oauth');
 //var players = require('./routes/players');
 var http = require('http');
@@ -18,7 +18,7 @@ app.use(express.logger('dev'));
 app.use(express.bodyParser());
 app.use(express.methodOverride());
 app.use(app.router);
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname + '/public'));
 // development only
 if ('development' == app.get('env')) {
   app.use(express.errorHandler());
@@ -33,7 +33,7 @@ if ('development' == app.get('env')) {
 // create
 app.post('/user', user.create);
 // login
-app.get('/user', user.login);
+app.post('/user/login', user.login);
 // update
 app.put('/user', auth.check, user.update);
 // delete

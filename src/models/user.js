@@ -1,6 +1,7 @@
 var crypto = require('crypto');
-var slackr_utils = require('../slackr_utils');
-var appErr = require('../util/applicationErrors');
+var slackr_utils = require(__dirname + '/../slackr_utils');
+var appErr = require(__dirname + '/../util/applicationErrors');
+var models = require(__dirname + '/../models');
 var databaseUrl = 'fantasyslackr';
 var collections = [
     'users',
@@ -16,9 +17,7 @@ var ObjectID = require('mongodb').ObjectID;
 var utils = require('util');
 var async = require('async');
 var extend = require('extend');
-var models = require(__dirname + '/../models');
 var log = require('log4js').getLogger('User');
-var publishChannel = 'new-setup-request';
 module.exports = function (exporter) {
   return exporter.define('User', {
     _id: null,
@@ -37,16 +36,16 @@ module.exports = function (exporter) {
     guid: null,
     session_handle: null,
     session_handle_expired: null,
-    current_login: null,
     request_token: null,
     request_verifier: null,
     request_token_secret: null,
-    xoauth_request_auth_url: null
+    xoauth_request_auth_url: null,
+    currentLogin: null,
   }, {
     findByName: function (name, next) {
       db.users.findOne({ name: name }, function (err, result) {
-        if (err || !result) {
-          next(err || new Error('No result'));
+        if (err) {
+          next(err);
         } else {
           next(null, result);
         }
@@ -141,11 +140,13 @@ module.exports = function (exporter) {
       var oauth = self.getOauthContext();
       oauth.refresh(function (err, tokenDetails) {
         if (err) {
+          log.error(err);
           next(err);
         } else if (!tokenDetails){ // tokens are still good
           log.info("User's token is not expired");
           next(null);
         } else {
+          log.info("User token refreshed");
           extend(self, tokenDetails);
           self.save(function (err) {
             next(err);
@@ -162,7 +163,7 @@ module.exports = function (exporter) {
       });
       return oauth;
     },
-    makeSession: function () {
+    makeSession: function (next) {
       this.currentLogin = slackr_utils.requestHashAsync();
       this.save(function (err) {
         next(err);
@@ -267,6 +268,19 @@ module.exports = function (exporter) {
           self.activity = result;
         next(err, result);
       });
+    },
+    safeData: function(){
+      return {
+       _id: this._id,
+        name: this.name,
+        email: this.email,
+        leagues: this.leagues,
+        teams: this.teams,
+        players: this.players,
+        activity: this.activity,
+        guid: this.guid,
+        currentLogin: this.currentLogin
+      }
     }
   });
 };

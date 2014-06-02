@@ -58,7 +58,7 @@ var TEST_USER_GUID = config.test.guid;
 var myPlayer;
 
 describe('Player', function (){
-	describe("#save",function(){
+	describe("#save()",function(){
 		it("Should create the test player",function(done){
 			myPlayer = models.player.load(TEST_PLAYER);
 			myPlayer.save(function(err){
@@ -87,7 +87,7 @@ describe('Player', function (){
 			});
 		});
 	});
-	describe("#oauthContext",function(){
+	describe("#oauthContext()",function(){
 		it("Should get the player's owner's oauth data",function(){
 			myPlayer.oauthContext(function(err,oauth){
 				assert.ok(oauth, "Returned oauth is null!");
@@ -95,19 +95,22 @@ describe('Player', function (){
 			});
 		});
 	});
-	describe.skip("#get()",function(){
+	describe("#get()",function(){
 		it("Should get the test xml and return a JS object",function(done){
-			var url = "playerGetTest";
-			myPlayer.get(url,function(err,data){
-				if (err)
-					throw err;
-				log.debug(data);
-				assert.equal(data.message['#'],"true");
+			if (process.env.NODE_ENV == 'test'){
+				var url = "playerGetTest";
+				myPlayer.get(url,function(err,data){
+					if (err)
+						throw err;
+					assert.equal(data.message['#'],"true");
+					done();
+				});
+			} else {
 				done();
-			});
+			}
 		});
 	});
-	describe.skip("#getLatestPosition",function(){
+	describe("#getLatestPosition()",function(){
 		it("Should return XML describing the current poistion of the player",function(done){
 			this.timeout(5000);
 			myPlayer.getLatestPosition(function(err){
@@ -117,7 +120,7 @@ describe('Player', function (){
 			});
 		});
 	});
-	describe("#getLatestStats",function(){
+	describe("#getLatestStats()",function(){
 		it("Should return XML describing the current stats of the player",function(done){
 			this.timeout(5000);
 			myPlayer.getLatestStats(function(err){
@@ -125,10 +128,31 @@ describe('Player', function (){
 					throw err;
 				done();
 			});
-		})
-	})
-	describe.skip("#moveToStart",function(){
-		it("Should ")
+		});
+	});
+	describe("#moveToBench()",function(){
+		it("Should move the player to bench and return a 200",function(done){
+			myPlayer.moveToBench(function(err){
+				if (err)
+					throw err;
+				done();
+			});
+		});
+	});
+	describe("#moveToStart()",function(){
+		it("Should move the player to starting position and return a 200",function(done){
+			myPlayer.moveToStart(function(err){
+				if (err)
+					throw err;
+				done();
+			});
+		});
+	});
+	describe("#isBye(currentWeek)",function(){
+		it("Should return true or false if this player's nye is currentWeek",function(){
+			assert.ok(myPlayer.isBye(5),"isBye() returned incorrect value");
+			assert.ok(!myPlayer.isBye(6),"isBye() returned incorrect value");
+		});
 	});
 	
 

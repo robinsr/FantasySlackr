@@ -149,7 +149,7 @@ module.exports = function (exporter) {
         next(err, result);
       });
     },
-    put: function (url, data, next) {
+    put: function (requestUrl, data, next) {
       var self = this;
       function getOauthContext(cb) {
         self.oauthContext(function (err, oauth) {
@@ -187,24 +187,22 @@ module.exports = function (exporter) {
     getLatestPosition: function (next) {
       var self = this;
       var requestUrl = utils.format('fantasy/v2/team/%s/roster/players', self.team_key);
-      self.get(requestUrl, function (err, newData) {
-        if (!err) {
+      async.waterfall([
+        function (cb){
+          self.get(requestUrl, function (err, newData) { cb(err,newData); });
+        },
+        function (newData,cb){
           var relevantPlayer = newData.team.roster.players.player.filter(function(p){
             return p.player_key == self.player_key;
           });
-          if (relevantPlayer[0]){
-            self.retrieved = new Date().getTime();
-            self.selected_position = relevantPlayer.selected_position;
-            self.save(function (err) {
-              next(err);
-            });
-          } else {
-            next(new Error("Cannot get current position of player! Is this player on this team?"));
-          }          
-        } else {
-          next(err);
-        }
-      });
+          if (relevantPlayer[0]) cb(null,relevantPlayer[0]);
+          else cb(new Error("Cannot get current position of player! Is this player on this team?"));
+        },
+        function (p, cb){
+          self.retrieved = new Date().getTime();
+          self.selected_position.position = p.selected_position;
+          self.save(function (err) { cb(err); });
+        }],function(err){ next(err); });
     },
     getOwnershipPercentage: function (next) {
       var self = this;
@@ -224,8 +222,8 @@ module.exports = function (exporter) {
         }
       });
     },
-    isBye: function () {
-      if (this.bye_week == currentWeek) {
+    isBye: function (currentWeek) {
+      if (this.bye_weeks.week == currentWeek) {
         return true;
       } else {
         return false;
@@ -236,23 +234,23 @@ module.exports = function (exporter) {
     getWaiverReplacement: function (replacementPlayerKey) {
     },
     moveToStart: function (next) {
-      self._movePlayer(self.position, function (err) {
+      this._movePlayer(this.eligible_positions.position, function (err) {
         next(err);
       });
     },
     moveToBench: function (next) {
-      self._movePlayer('BN', function (err) {
+      this._movePlayer('BN', function (err) {
         next(err);
       });
     },
     _movePlayer: function (desired_position, next) {
-      log.info('Moving %s to %s', this.name.full, position);
+      log.info('Moving %s to %s', this.name.full, desired_position);
       var self = this;
       var requestURL = 'fantasy/v2/team/' + self.team_key + '/roster';
       async.series([
         function (cb) {
           self.getLatestPosition(function (err) {
-            next(err);
+            cb(err);
           });
         },
         function (cb) {
@@ -264,7 +262,7 @@ module.exports = function (exporter) {
         },
         function (cb) {
           // dont render XML till last minute
-          var requestXML = templates.movePlayer.render({
+          var requestXML = templates.movePlayer({
             week: '13',
             player_key: self.player_key,
             position: desired_position

@@ -88,8 +88,11 @@ module.exports = function (exporter) {
       }, 500);
     },
     refresh: function (next) {
+      log.info("Rereshing")
       var self = this;
-      now = new Date().getTime();
+      var now = new Date();
+      var expires = new Date(self.tokenDetails.access_token_expires);
+      log.info(now.toISOString(), expires.toISOString());
       if (typeof self.tokenDetails.access_token_expires == 'undefined' || now > self.tokenDetails.access_token_expires) {
         getPlaintext(self.consumerKey, self.consumerSecret, function (oa) {
           oa.getOAuthAccessToken({
@@ -164,7 +167,7 @@ module.exports = function (exporter) {
               url: url,
               body: xml,
               oauth_token: self.tokenDetails.access_token,
-              oauth_token_secret: self.tokenDetails.access_token_secret
+              oauth_token_secret: self.tokenDetails.access_token_secret,
             }, function (err, result) {
               if (!err && process.env.NODE_ENV !== 'test')
                 db.metadata.save({data:result,url:url,put:xml});
@@ -186,7 +189,7 @@ module.exports = function (exporter) {
 function getPlaintext(k, s, next) {
   // oauth object for getting access
   next(new mashape({
-    realm: 'apis.yahoo.com',
+    realm: 'yahooapis.com',
     requestUrl: requestUrl,
     accessUrl: accessUrl,
     consumerKey: k,
@@ -206,7 +209,7 @@ function getPlaintext(k, s, next) {
 function getHmac(k, s, next) {
   // oauth object for getting access
   next(new mashape({
-    realm: 'apis.yahoo.com',
+    realm: 'yahooapis.com',
     requestUrl: requestUrl,
     accessUrl: accessUrl,
     consumerKey: k,

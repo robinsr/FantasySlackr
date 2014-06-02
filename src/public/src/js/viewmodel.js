@@ -1,4 +1,4 @@
-function team(obj){
+function Team(obj){
 	var self = this;
 	self._id = obj.id
 	self.team_key = obj.team_key;
@@ -18,11 +18,11 @@ function team(obj){
 		ask_def: ko.observable(obj.settings.ask_def),
 		ask_k: ko.observable(obj.settings.ask_k),
 		emails: ko.observable(obj.settings.emails),
-		injury_reports: ko.observable(obj.settings.injury_reports)
+		injury_reports: ko.observable(obj.settings.injury_reports) 
 	};
 }
 
-function player(obj){
+function Player(obj){
 	var self = this;
 	_id = obj.id;
 	self.team_key = obj.team_key;
@@ -55,7 +55,7 @@ function player(obj){
 	};
 }
 
-function league(obj){
+function League(obj){
 	this._id = obj.id;
 	this.league_key = obj.league_key;
 	this.name = obj.name;
@@ -150,7 +150,7 @@ function AppViewModel() {
 			username = self.loginName();
 			password = self.loginPass();
 		}
-		utils.issue("POST","method/login",{
+		utils.issue("POST","user/login",{
 		uname: username,
 		upass: password
 		},function(err,stat,text){
@@ -162,7 +162,7 @@ function AppViewModel() {
 				self.loginName('');
 				self.loginPass('');
 				
-				self.getUserData();
+				self.getUserData(data);
 			} else if (stat == 400) {
 				var data = JSON.parse(text)
 				var missing = data.RequestParameterMissing;
@@ -209,8 +209,10 @@ function AppViewModel() {
 			},function(err,stat,text){
 				if (stat == 200) {
 					var data = JSON.parse(text);
-					utils.setCredentials(self.signupName(),data.session)
-					self.getUserData();
+					utils.setCredentials(data.name,data.currentLogin);
+
+					
+					
 					self.modalStatus('');
 				} else if (stat == 400) {
 					self.shake('login')
@@ -222,34 +224,43 @@ function AppViewModel() {
 		console.log(new Date().getTime())
 	}
 	
-	self.getUserData = function(){
-		utils.issue("POST","method/getUserData", null ,function(err,stat,text){
-			if (err || stat != 200){
-				modalStatus('server-error')
-			} else {
-				var data = JSON.parse(text);
-				$(data.teams).each(function(i,o){
-					var thisTeam = this;
-					$(data.leagues).each(function(i,o){
-						if (this.league_key == thisTeam.league_key){
-							$(this.settings.roster_positions.roster_position).each(function(i, o){
-								this.team_key = thisTeam.team_key;
-								self.positions.push(new position(this))
-							});
-						}
-					})
-					self.teams.push(new team(this))
+	self.getUserData = function(data){
+		async.parallel({
+			setPlayers:function(cb){
+				async.each(data.players,function(p,nP){
+					self.players.push(new Player(p));
+					nP();
+				},function(){
+					cb(null);
 				});
-				$(data.activity).each(function(indexi, obji){
-					self.activityEntries.push(this)
+			},
+			setTeams:function(cb){
+				async.each(data.teams,function(p,nP){
+					self.teams.push(new Team(p));
+					nP();
+				},function(){
+					cb(null);
 				});
-				$(data.players).each(function(i,o){
-					self.players.push(new player(this))
-				})
-				
-				self.displayPage('dashboard');
+			},
+			setLeagues: function(cb){
+				async.each(data.leagues,function(p,nP){
+					self.leagues.push(new League(p));
+					nP();
+				},function(){
+					cb(null);
+				});
+			},
+			setActivity: function(cb){
+				async.each(data.activity,function(p,nP){
+					self.activityEntries.push(p);
+					nP();
+				},function(){
+					cb(null);
+				});
 			}
-		})
+		},function(){
+			self.displayPage('dashboard');
+		});
 	}
 	// 	if (this.roster.length > 0){
 	// 	$(this.roster).each(function(indexi, obji){

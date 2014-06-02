@@ -112,12 +112,12 @@ div.dashboard table{
 	display: inline;
 }
 input.loading {
-	background-image: url(loading.gif);
+	background-image: url(../images/loading.gif);
 	background-repeat: no-repeat;
 	background-position: 96% center;
 }
 input.verified {
-	background-image: url(check_s.png);
+	background-image: url(../images/check_s.png);
 	background-repeat: no-repeat;
 	background-position: 96% center;
 }
@@ -135,7 +135,7 @@ input.rejected {
 }
 @media screen and (min-width: 768px) {
 	body {
-		background: url(stadium_m.jpg) no-repeat center center fixed; 
+		background: url(../images/stadium_m.jpg) no-repeat center center fixed; 
 	}
 	.jumbo {
 		font-size: 10em;
@@ -143,7 +143,7 @@ input.rejected {
 }
 @media screen and (max-width: 767px) {
 	body {
-		background: url(stadium_s.jpg) no-repeat center center fixed; 
+		background: url(../images/stadium_s.jpg) no-repeat center center fixed; 
 	}
 }
 
