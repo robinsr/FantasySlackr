@@ -4,16 +4,8 @@ var util = require('util');
 var aoo = require(__dirname + '/server');
 var log = require('log4js').getLogger('Ouath-test');
 var testCase, testUser, old_access;
-var TEST_CASE_INFO = {
-    name: 'Test User',
-    email: 'testuser@test.com',
-    pass: '12345',
-    salt: 'abcde',
-    teams: ['test team'],
-    leagues: ['test league'],
-    players: ['test player'],
-    activity: ['test activity']
-  };
+var TEST_CASE_INFO = require(__dirname + "/data/user");
+
 var TEST_CASE_ID = '532de50296f5b0f91c000001';
 describe('Oauth', function () {
   describe('#create()', function () {
@@ -48,7 +40,7 @@ describe('Oauth', function () {
   });
   describe('refresh', function () {
     it('Should refresh the test users token', function (done) {
-      testCase.refreshToken(function (err) {
+      testCase.refresh(function (err) {
         if (err)
           throw err;
         assert.ok(testCase.access_token !== old_access, 'Test users access token was not refreshed');
