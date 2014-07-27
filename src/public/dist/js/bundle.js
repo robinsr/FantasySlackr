@@ -3012,80 +3012,6 @@ var utils = (function(){
     }
 })();
 
-function League(obj){
-	this._id = obj.id;
-	this.league_key = obj.league_key;
-	this.name = obj.name;
-	this.url = obj.url;
-}
-function Player(obj){
-	var self = this;
-	_id = obj.id;
-	self.team_key = obj.team_key;
-	self.team_name = obj.team_name;
-	self.player_key = obj.player_key;
-	self.player_full_name = obj.name.full;
-	self.player_first = obj.name.first;
-	self.player_last = obj.name.last;
-	self.position = obj.eligible_positions.position;
-	self.selected_position = ko.observable(obj.selected_position.position)
-	self.selected_position.subscribe(function(val){
-		utils.issue("PUT", "method/lineup", {
-			player_key: self.player_key,
-			team_key: self.team_key,
-			move_to: val
-		},function(err,stat,text){
-			console.log(err,stat,text)
-		});
-		console.log('player '+self.player_full_name+" was moved to "+val)
-	})
-	self.injury_status = obj.status ? obj.status : "A";
-	self.bye_week = obj.bye_weeks.week;
-	self.undroppable = obj.undroppable;
-	self.image_url = obj.image_url;
-	self.projected_points = {};
-	self.settings = {
-		never_drop: ko.observable(obj.settings.never_drop),
-		start_if_probable: ko.observable(obj.settings.start_if_probable),
-		start_if_questionable: ko.observable(obj.settings.start_if_questionable)
-	};
-}
-
-function position(obj){
-	var self = this;
-	self.position = obj.position;
-	self.count = obj.count;
-	self.starters = ko.computed(function(){
-		var numberOfStarters = ko.utils.arrayFilter(fantasyslackr.viewmodel.selectedPlayers(),function(pos){
-			return ((pos.selected_position() == pos.position) && (pos.selected_position() == self.position))
-		})
-		return numberOfStarters.length
-	});
-	self.team_key = obj.team_key;
-}
-function Team(obj){
-	var self = this;
-	self._id = obj.id
-	self.team_key = obj.team_key;
-	self.name = obj.name;
-	self.league = obj.league;
-	self.game = obj.game;
-	self.active = ko.observable(obj.active);
-	self.settings = {
-		probable_player: ko.observable(obj.settings.probable_player),
-		questionable_player: ko.observable(obj.settings.questionable_player),
-		out_player: ko.observable(obj.settings.out_player),
-		lack_of_players: ko.observable(obj.settings.lack_of_players),
-		ask_qb: ko.observable(obj.settings.ask_qb),
-		ask_rb: ko.observable(obj.settings.ask_rb),
-		ask_wr: ko.observable(obj.settings.ask_wr),
-		ask_te: ko.observable(obj.settings.ask_te),
-		ask_def: ko.observable(obj.settings.ask_def),
-		ask_k: ko.observable(obj.settings.ask_k),
-		emails: ko.observable(obj.settings.emails),
-		injury_reports: ko.observable(obj.settings.injury_reports) 
-	};
-}
 ko.observable.fn.subscribeAjaxIcons = function(type,cb){
     this.subscribe(function(value){
         cb('loading')
@@ -3280,11 +3206,82 @@ ko.bindingHandlers.switchPanel = {
         
     }
 }
+function Team(obj){
+	var self = this;
+	self._id = obj.id
+	self.team_key = obj.team_key;
+	self.name = obj.name;
+	self.league = obj.league;
+	self.game = obj.game;
+	self.active = ko.observable(obj.active);
+	self.settings = {
+		probable_player: ko.observable(obj.settings.probable_player),
+		questionable_player: ko.observable(obj.settings.questionable_player),
+		out_player: ko.observable(obj.settings.out_player),
+		lack_of_players: ko.observable(obj.settings.lack_of_players),
+		ask_qb: ko.observable(obj.settings.ask_qb),
+		ask_rb: ko.observable(obj.settings.ask_rb),
+		ask_wr: ko.observable(obj.settings.ask_wr),
+		ask_te: ko.observable(obj.settings.ask_te),
+		ask_def: ko.observable(obj.settings.ask_def),
+		ask_k: ko.observable(obj.settings.ask_k),
+		emails: ko.observable(obj.settings.emails),
+		injury_reports: ko.observable(obj.settings.injury_reports) 
+	};
+}
 
+function Player(obj){
+	var self = this;
+	_id = obj.id;
+	self.team_key = obj.team_key;
+	self.team_name = obj.team_name;
+	self.player_key = obj.player_key;
+	self.player_full_name = obj.name.full;
+	self.player_first = obj.name.first;
+	self.player_last = obj.name.last;
+	self.position = obj.eligible_positions.position;
+	self.selected_position = ko.observable(obj.selected_position.position)
+	self.selected_position.subscribe(function(val){
+		utils.issue("PUT", "method/lineup", {
+			player_key: self.player_key,
+			team_key: self.team_key,
+			move_to: val
+		},function(err,stat,text){
+			console.log(err,stat,text)
+		});
+		console.log('player '+self.player_full_name+" was moved to "+val)
+	})
+	self.injury_status = obj.status ? obj.status : "A";
+	self.bye_week = obj.bye_weeks.week;
+	self.undroppable = obj.undroppable;
+	self.image_url = obj.image_url;
+	self.projected_points = {};
+	self.settings = {
+		never_drop: ko.observable(obj.settings.never_drop),
+		start_if_probable: ko.observable(obj.settings.start_if_probable),
+		start_if_questionable: ko.observable(obj.settings.start_if_questionable)
+	};
+}
 
+function League(obj){
+	this._id = obj.id;
+	this.league_key = obj.league_key;
+	this.name = obj.name;
+	this.url = obj.url;
+}
 
-
-
+function position(obj){
+	var self = this;
+	self.position = obj.position;
+	self.count = obj.count;
+	self.starters = ko.computed(function(){
+		var numberOfStarters = ko.utils.arrayFilter(fantasyslackr.viewmodel.selectedPlayers(),function(pos){
+			return ((pos.selected_position() == pos.position) && (pos.selected_position() == self.position))
+		})
+		return numberOfStarters.length
+	});
+	self.team_key = obj.team_key;
+}
 
 
 function AppViewModel() {

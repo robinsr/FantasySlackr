@@ -83,8 +83,7 @@ module.exports = function (exporter) {
     findByOwner: function(owner, next){
       if (typeof owner == 'string')
         owner = new ObjectID(owner);
-      db.teams.find({ owner: owner }, function (err, result) {
-        console.log(result)
+      db.players.find({ owner: owner }, function (err, result) {
         next(err,result);
       });
     }
