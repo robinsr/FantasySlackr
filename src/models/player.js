@@ -5,7 +5,7 @@ var collections = [
     'leagues'
   ];
 var db = require('mongojs').connect(databaseUrl, collections);
-var objectId = require('mongodb').ObjectID;
+var ObjectID = require('mongodb').ObjectID;
 var utils = require('util');
 var async = require('async');
 var appErr = require('../util/applicationErrors');

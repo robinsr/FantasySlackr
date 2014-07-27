@@ -24,7 +24,8 @@ module.exports = function(grunt) {
         'src/public/src/js/jquery-1.8.3.min.js',
         'src/public/src/js/knockout_full.js',
         'src/public/src/js/utils.js',
-        'src/public/src/js/binding.js',
+        'src/public/src/js/models/*.js',
+        'src/public/src/js/bindings/*.js',
         'src/public/src/js/viewmodel.js'
         ],
         dest: 'src/public/dist/js/bundle.js'
