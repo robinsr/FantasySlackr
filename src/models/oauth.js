@@ -20,11 +20,11 @@ var db = require('mongojs').connect(databaseUrl, collections);
 log.debug('Oauth using endpoint %s', endpoint);
 /**
  * Oauth Object. gets Request Tokens, gets Access Token, makes signed requests using
- * GET/PUT/DELETE methods. 
+ * GET/PUT/DELETE methods.
  * @param {[type]}   opt  Adds oauth properties from options object to oauth tokenDetails object.
  * Useful when all the oauth access properties are known and the Oauth is
  * intended to be used to make GET/PUT/DEL requests
- * 
+ *
  * @param {Function} next Callback
  */
 module.exports = function (exporter) {
@@ -87,7 +87,7 @@ module.exports = function (exporter) {
         });
       }, 500);
     },
-    refresh: function (next) {
+    refreshToken: function (next) {
       log.info("Rereshing")
       var self = this;
       var now = new Date();

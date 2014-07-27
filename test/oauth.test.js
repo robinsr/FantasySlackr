@@ -4,49 +4,36 @@ var util = require('util');
 var aoo = require(__dirname + '/server');
 var log = require('log4js').getLogger('Ouath-test');
 var testCase, testUser, old_access;
-var TEST_CASE_INFO = {
-    name: 'Test User',
-    email: 'testuser@test.com',
-    pass: '12345',
-    salt: 'abcde',
-    teams: ['test team'],
-    leagues: ['test league'],
-    players: ['test player'],
-    activity: ['test activity']
-  };
-var TEST_CASE_ID = '532de50296f5b0f91c000001';
+var TEST_CASE_INFO = require(__dirname + "/data/user");
+
+
 describe('Oauth', function () {
-  describe('#create()', function () {
-    it('Should return a new oauth object', function () {
+  describe('#getToken()', function () {
+    before(function () {
       testCase = models.oauth.create();
       assert.equal(testCase.name, 'oauth');
     });
-  });
-  describe('#getToken()', function () {
     it('Should get a request token from yahoo', function (done) {
       testCase.getToken(function (err) {
         if (err)
           throw err;
-        assert.ok(testCase.tokenDetails.request_token !== null, 'No token');
-        assert.ok(testCase.tokenDetails.request_verifier !== null, 'No verifier');
-        assert.ok(testCase.tokenDetails.xoauth_request_auth_url !== null, 'No redirect url');
-        done();
-      });
-    });
-  });
-  describe(' - Creating test user - ', function () {
-    it('Should create a test user', function (done) {
-      models.user.findById(TEST_CASE_ID, function (err, result) {
-        if (err)
-          throw err;
-        testCase = models.user.load(result);
-        assert.ok(testCase.access_token !== null, 'Test user has null access token');
-        old_access = testCase.access_token;
+        assert.ok(testCase.tokenDetails.request_token, 'No token');
+        assert.ok(testCase.tokenDetails.request_verifier, 'No verifier');
+        assert.ok(testCase.tokenDetails.xoauth_request_auth_url, 'No redirect url');
         done();
       });
     });
   });
   describe('refresh', function () {
+    before(function (done) {
+      testCase = models.user.load(TEST_CASE_INFO);
+      testCase.save(function(err){
+        if (err) throw err;
+        assert.ok(testCase.access_token, 'Test user has null access token');
+        old_access = testCase.access_token;
+        done();
+      })
+    });
     it('Should refresh the test users token', function (done) {
       testCase.refreshToken(function (err) {
         if (err)

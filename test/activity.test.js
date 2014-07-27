@@ -6,13 +6,7 @@ var log = require('log4js').getLogger('Activity-test');
 var ObjectID = require('mongodb').ObjectID;
 var TEST_CASE_ID = config.test.userID;
 
-var TEST_CASE_INFO = {
-	name : "name",
-	date : new Date(),
-	type : "test strings",
-	message : "test strings",
-	owner: new ObjectID(TEST_CASE_ID)
-};
+var TEST_CASE_INFO = require(__dirname + "/data/activity");
 
 var myActivity;
 

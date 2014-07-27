@@ -77,7 +77,7 @@ module.exports = function (exporter) {
           next(null,true);
         else if (err.toString() !== 'No Result')
           next(err);
-        else 
+        else
           next(null,false);
       });
     },
@@ -138,7 +138,7 @@ module.exports = function (exporter) {
     refreshToken: function (next) {
       var self = this;
       var oauth = self.getOauthContext();
-      oauth.refresh(function (err, tokenDetails) {
+      oauth.refreshToken(function (err, tokenDetails) {
         if (err) {
           log.error(err);
           next(err);
@@ -240,7 +240,7 @@ module.exports = function (exporter) {
     getPlayers: function (next) {
       var self = this;
       models.player.findByOwner(self._id, function (err, result) {
-        if (result) 
+        if (result)
           self.players = result;
         next(err, result);
       });
@@ -248,7 +248,7 @@ module.exports = function (exporter) {
     getLeagues: function (next) {
       var self = this;
       models.league.findByOwner(self._id, function (err, result) {
-        if (result) 
+        if (result)
           self.leagues = result;
         next(err, result);
       });
@@ -256,7 +256,7 @@ module.exports = function (exporter) {
     getTeams: function (next) {
       var self = this;
       models.team.findByOwner(self._id, function (err, result) {
-        if (result) 
+        if (result)
           self.teams = result;
         next(err, result);
       });
@@ -264,7 +264,7 @@ module.exports = function (exporter) {
     getActivity: function (next) {
       var self = this;
       models.activity.findByOwner(self._id, function (err, result) {
-        if (result) 
+        if (result)
           self.activity = result;
         next(err, result);
       });
